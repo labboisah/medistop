@@ -34,9 +34,9 @@
 <!-- QUICK ACTIONS -->
 <div class="grid md:grid-cols-4 gap-6 mb-12">
 
-    <a href="#"
+    <a href="{{route('bills.index')}}"
        class="bg-primary text-white p-6 rounded-2xl shadow hover:bg-secondary transition">
-        📝 Record Service
+        📝 Bills
     </a>
 
     <a href="#"
@@ -57,39 +57,26 @@
 </div>
 
 <!-- RECENT ACTIVITIES -->
-<div class="grid md:grid-cols-2 gap-8">
+<!-- RECENT BILLS -->
+<div class="bg-white rounded-2xl shadow p-6">
+    <h3 class="font-bold text-primary mb-4">Recent Bills</h3>
 
-    <!-- Recent Services -->
-    <div class="bg-white rounded-2xl shadow p-6">
-        <h3 class="font-bold text-primary mb-4">Recent Services</h3>
+    @forelse([] as $bill)
+        <div class="border-b py-3 text-sm flex justify-between">
+            <span>
+                {{ $bill->bill_no }}
+                <br>
+                <small class="text-gray-500">
+                    {{ $bill->patient_name ?? 'Walk-in' }}
+                </small>
+            </span>
 
-        @forelse([] as $record)
-            <div class="border-b py-3 text-sm flex justify-between">
-                <span>{{ $record->service->name ?? '' }}</span>
-                <span class="font-semibold text-primary">
-                    ₦{{ number_format($record->amount, 2) }}
-                </span>
-            </div>
-        @empty
-            <p class="text-gray-500 text-sm">No service records yet.</p>
-        @endforelse
-    </div>
-
-    <!-- Recent Expenses -->
-    <div class="bg-white rounded-2xl shadow p-6">
-        <h3 class="font-bold text-primary mb-4">Recent Expenses</h3>
-
-        @forelse([] as $expense)
-            <div class="border-b py-3 text-sm flex justify-between">
-                <span>{{ $expense->description }}</span>
-                <span class="font-semibold text-red-600">
-                    ₦{{ number_format($expense->amount, 2) }}
-                </span>
-            </div>
-        @empty
-            <p class="text-gray-500 text-sm">No expenses recorded yet.</p>
-        @endforelse
-    </div>
-
+            <span class="font-semibold text-primary">
+                ₦{{ number_format($bill->total_amount, 2) }}
+            </span>
+        </div>
+    @empty
+        <p class="text-gray-500 text-sm">No bills recorded yet.</p>
+    @endforelse
 </div>
 

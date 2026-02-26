@@ -1,0 +1,118 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Service;
+use App\Models\BillItem;
+use App\Models\Bill;
+
+class BillController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $bills = \App\Models\Bill::latest()->paginate(15);
+
+        return view('bills.index', compact('bills'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        $services = Service::orderBy('name')->get();
+        return view('bills.create', compact('services'));
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'patient_name' => 'nullable|string',
+            'services' => 'required|array',
+            'services.*' => 'exists:services,id',
+        ]);
+
+        $billNo = 'BILL-' . date('Ymd') . '-' . strtoupper(uniqid());
+
+        $totalAmount = 0;
+        $totalStaffShare = 0;
+        $totalAnnexShare = 0;
+
+        $bill = Bill::create([
+            'bill_no' => $billNo,
+            'patient_name' => $request->patient_name,
+            'user_id' => auth()->id(),
+        ]);
+
+        foreach ($request->services as $serviceId) {
+
+            $service = \App\Models\Service::find($serviceId);
+
+            $price = $service->price;
+            $staffShare = $price * 0.40;
+            $annexShare = $price * 0.60;
+
+            BillItem::create([
+                'bill_id' => $bill->id,
+                'service_id' => $service->id,
+                'price' => $price,
+                'staff_share' => $staffShare,
+                'annex_share' => $annexShare,
+            ]);
+
+            $totalAmount += $price;
+            $totalStaffShare += $staffShare;
+            $totalAnnexShare += $annexShare;
+        }
+
+        $bill->update([
+            'total_amount' => $totalAmount,
+            'total_staff_share' => $totalStaffShare,
+            'total_annex_share' => $totalAnnexShare,
+        ]);
+
+        return redirect()->route('dashboard')
+            ->with('success', 'Bill recorded successfully.');
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(\App\Models\Bill $bill)
+    {
+        $bill->load('items.service', 'user');
+
+        return view('bills.show', compact('bill'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
+    {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, string $id)
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        //
+    }
+}

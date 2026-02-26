@@ -50,9 +50,9 @@
                 🩻 Services
             </a>
 
-            <a href="/records"
+            <a href="{{route('bills.index')}}"
                class="block px-4 py-2 rounded-lg hover:bg-secondary transition">
-                📄 Service Records
+                📄 Bills
             </a>
 
             <a href="/expenses"
