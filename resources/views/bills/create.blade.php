@@ -15,6 +15,11 @@
     <input type="text" name="patient_name"
            class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
 </div>
+<div class="mb-6">
+    <label class="block text-sm mb-2 font-medium">Discount (₦)</label>
+    <input type="number" step="0.01" name="discount"
+           class="w-full px-4 py-3 border rounded-xl">
+</div>
 
 <!-- SERVICE SELECT -->
 <div class="mb-6">

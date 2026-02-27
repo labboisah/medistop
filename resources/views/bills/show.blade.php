@@ -15,6 +15,12 @@
            class="text-sm text-primary hover:underline">
             ← Back
         </a>
+        @if($bill->balance > 0)
+            <a href="{{ route('payments.create', $bill) }}"
+            class="bg-accent text-white px-6 py-3 rounded-xl">
+                Record Payment
+            </a>
+        @endif
     </div>
 
     <div class="mb-6 text-sm text-gray-600">
@@ -64,6 +70,7 @@
             <strong>Total Annex Share:</strong> ₦{{ number_format($bill->total_annex_share,2) }}
         </p>
     </div>
+    
 
 </div>
 

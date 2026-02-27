@@ -72,10 +72,18 @@ class BillController extends Controller
             $totalAnnexShare += $annexShare;
         }
 
+        $discount = $request->discount ?? 0;
+        $finalAmount = $totalAmount - $discount;
+
         $bill->update([
             'total_amount' => $totalAmount,
+            'discount_amount' => $discount,
+            'final_amount' => $finalAmount,
             'total_staff_share' => $totalStaffShare,
             'total_annex_share' => $totalAnnexShare,
+            'total_paid' => 0,
+            'balance' => $finalAmount,
+            'payment_status' => 'unpaid',
         ]);
 
         return redirect()->route('dashboard')

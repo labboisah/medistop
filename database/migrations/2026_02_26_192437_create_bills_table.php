@@ -18,6 +18,11 @@ return new class extends Migration
             $table->decimal('total_amount', 12, 2)->default(0);
             $table->decimal('total_staff_share', 12, 2)->default(0);
             $table->decimal('total_annex_share', 12, 2)->default(0);
+            $table->decimal('discount_amount', 12, 2)->default(0);
+            $table->decimal('final_amount', 12, 2)->default(0);
+            $table->decimal('total_paid', 12, 2)->default(0);
+            $table->decimal('balance', 12, 2)->default(0);
+            $table->string('payment_status')->default('unpaid');
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
         });

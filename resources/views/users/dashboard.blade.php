@@ -39,14 +39,14 @@
         📝 Bills
     </a>
 
-    <a href="#"
+    <a href="{{route('expenses.index')}}"
        class="bg-accent text-white p-6 rounded-2xl shadow hover:bg-green-600 transition">
-        💸 Add Expense
+        💸 Expenses
     </a>
 
-    <a href="#"
+    <a href="{{route('payments.index')}}"
        class="bg-blue-700 text-white p-6 rounded-2xl shadow hover:bg-blue-800 transition">
-        💳 Record Payment
+        💳 Payment
     </a>
 
     <a href="#"
