@@ -9,6 +9,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Report;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Storage;
+use App\Exports\FinancialReportExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
@@ -89,6 +91,20 @@ class ReportController extends Controller
         };
 
         return response()->stream($callback,200,$headers);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $from = $request->from;
+        $to = $request->to;
+        $reportId = 'ANNEX-' . now()->format('YmdHis');
+
+        return Excel::download(
+            new FinancialReportExport($from, $to, $reportId),
+            "financial-report-$reportId.xlsx",
+            \Maatwebsite\Excel\Excel::XLSX,
+            ['charts' => true]
+        );
     }
 
    

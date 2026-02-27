@@ -23,10 +23,20 @@ body {
 
 .header {
     position: fixed;
-    top: -120px;
+    top: -120px;   /* Match your margin-top adjustment */
     left: 0;
     right: 0;
     height: 100px;
+    text-align: center;
+}
+
+.header img {
+    display: block;
+    margin: 0 auto;
+}
+
+.header h2 {
+    margin: 5px 0 0 0;
 }
 
 .footer {
@@ -105,20 +115,20 @@ th {
 </div>
 
 <!-- HEADER -->
-<div class="header">
-    @if(file_exists($logoPath))
-        <img src="{{ $logoPath }}" class="logo"><br>
-    @endif
-    <strong>ANNEX SYSTEM</strong><br>
-    Financial Report<br>
-    Ref: {{ $reportId }}
-    <p>
-        {{ \Carbon\Carbon::parse($from)->format('d M Y') }}
-        —
-        {{ \Carbon\Carbon::parse($to)->format('d M Y') }}
-    </p>
+<div class="header" style="margin-buttom: 20px;">
 
+    @if(file_exists($logoPath))
+        <img src="{{ $logoPath }}" height="50">
+    @endif
+
+    <h2>ANNEX SYSTEM</h2>
+
+    <strong>Financial Report</strong><br>
+    Ref: {{ $reportId }}<br>
+
+    <br>
 </div>
+<hr style="margin-top:10px;">
 
 <!-- FOOTER -->
 <div class="footer">

@@ -111,23 +111,23 @@
             <div class="grid grid-cols-2 gap-6 text-center">
 
                 <div>
-                    <h2 class="text-4xl font-bold counter" data-target="40">0</h2>
-                    <p class="text-gray-300">Staff Allocations Today</p>
+                    <h2 class="text-4xl font-bold counter" data-target="{{App\Models\User::find(1)->finance()['monthRevenue']}}">0</h2>
+                    <p class="text-gray-300">This Month's Revenue</p>
                 </div>
 
                 <div>
-                    <h2 class="text-4xl font-bold counter" data-target="100">0</h2>
-                    <p class="text-gray-300">Expenses Today</p>
+                    <h2 class="text-4xl font-bold counter" data-target="{{App\Models\User::find(1)->finance()['monthExpenses']}}">0</h2>
+                    <p class="text-gray-300">This Month's Expenses</p>
                 </div>
 
                 <div>
-                    <h2 class="text-4xl font-bold counter" data-target="24">0</h2>
-                    <p class="text-gray-300">Revenue Generated Today</p>
+                    <h2 class="text-4xl font-bold counter" data-target="{{App\Models\User::find(1)->finance()['monthPayments']}}">0</h2>
+                    <p class="text-gray-300">This Month Payments</p>
                 </div>
 
                 <div>
-                    <h2 class="text-4xl font-bold counter" data-target="2">0</h2>
-                    <p class="text-gray-300">Service Deliver Today</p>
+                    <h2 class="text-4xl font-bold counter" data-target="{{App\Models\User::find(1)->finance()['monthProfit']}}">0</h2>
+                    <p class="text-gray-300">This Month's Profits</p>
                 </div>
 
             </div>

@@ -4,28 +4,28 @@
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Revenue Today</h3>
         <p class="text-2xl font-bold text-primary mt-2">
-            ₦{{ number_format(0, 2) }}
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayGross'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Staff Allocation</h3>
         <p class="text-2xl font-bold text-accent mt-2">
-            ₦{{ number_format(0, 2) }}
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayStaffShare'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Expenses Today</h3>
         <p class="text-2xl font-bold text-red-600 mt-2">
-            ₦{{ number_format(0, 2) }}
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayExpenses'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Net Balance</h3>
         <p class="text-2xl font-bold text-secondary mt-2">
-            ₦{{ number_format(0, 2) }}
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayStaffShare'], 2) }}
         </p>
     </div>
 
@@ -49,10 +49,18 @@
         💳 Payment
     </a>
 
-    <a href="#"
-       class="bg-gray-800 text-white p-6 rounded-2xl shadow hover:bg-black transition">
-        📄 Generate PDF Report
-    </a>
+    <form method="POST" action="{{ route('reports.pdf') }}" id="pdfForm">
+        @csrf
+        <input type="hidden" name="chart_image" id="chartImageInput">
+        <input type="hidden" name="from" value="{{ now()->startOfDay() }}">
+        <input type="hidden" name="to" value="{{ now()->endOfDay() }}">
+
+        <button type="submit"
+            onclick="prepareChartImage()"
+            class="bg-red-700 text-white p-6 rounded-2xl shadow hover:bg-blue-800 transition">
+            Download Report in PDF
+        </button>
+    </form>
 
 </div>
 

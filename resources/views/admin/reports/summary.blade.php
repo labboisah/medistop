@@ -21,6 +21,17 @@
         class="bg-green-600 text-white px-4 py-2 rounded-xl">
         Download CSV
     </a>
+
+    <form method="POST" action="{{ route('admin.reports.excel') }}">
+        @csrf
+        <input type="hidden" name="from" value="{{ $from }}">
+        <input type="hidden" name="to" value="{{ $to }}">
+
+        <button class="bg-green-600 text-white px-4 py-2 rounded-xl">
+            Download Excel
+        </button>
+    </form>
+
 </div>
 <div class="bg-white p-8 rounded-2xl shadow mb-8">
 

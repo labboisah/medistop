@@ -53,11 +53,15 @@ Route::middleware(['auth', 'admin'])
 
             Route::post('/pdf', [ReportController::class,'exportPdf'])->name('pdf');
             Route::get('/csv', [ReportController::class,'exportCsv'])->name('csv');
+            Route::post('/excel', [ReportController::class,'exportExcel'])->name('excel');
     });
         
 });
 
 Route::middleware(['auth', 'user'])->group(function () {
+
+    Route::post('/pdf', [ReportController::class,'exportPdf'])->name('reports.pdf');
+
     Route::resource('bills', BillController::class);
     Route::resource('expenses', ExpenseController::class);
 
