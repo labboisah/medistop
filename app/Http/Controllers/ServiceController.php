@@ -16,7 +16,7 @@ class ServiceController extends Controller
     {
         $services = Service::with('category')
             ->latest()
-            ->paginate(15);
+            ->get();
 
         return view('admin.services.index', compact('services'));
     }
@@ -99,7 +99,7 @@ class ServiceController extends Controller
     public function destroy(Service $service)
     {
         // Optional: Prevent deletion if service has records
-        if ($service->serviceRecords()->exists()) {
+        if ($service->billItems->count() > 0) {
             return back()->with('error', 'Cannot delete service. It has recorded transactions.');
         }
 

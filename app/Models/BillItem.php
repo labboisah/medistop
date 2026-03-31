@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Services\RevenueCalculator;
 
 class BillItem extends Model
 {
@@ -10,8 +11,7 @@ class BillItem extends Model
         'bill_id',
         'service_id',
         'price',
-        'staff_share',
-        'annex_share',
+        
     ];
 
     public function bill()
@@ -22,5 +22,17 @@ class BillItem extends Model
     public function service()
     {
         return $this->belongsTo(Service::class);
+    }
+
+    public function revenueDistribution() {
+        return $this->hasOne(RevenueDistribution::class);
+    }
+
+    public function shares() {
+        return RevenueCalculator::calculate($this->service, $this->finalAmount());
+    }
+
+    function finalAmount() {
+        return $this->price - $this->bill->discount_amount;
     }
 }

@@ -77,17 +77,6 @@
             <!-- Actions -->
             <div class="flex justify-between items-center">
 
-                <form action="{{ route('admin.services.destroy', $service) }}"
-                      method="POST"
-                      onsubmit="return confirm('Delete this service?')">
-                    @csrf
-                    @method('DELETE')
-
-                    <button class="text-red-600 text-sm hover:underline">
-                        Delete Service
-                    </button>
-                </form>
-
                 <button type="submit"
                         class="bg-secondary text-white px-8 py-3 rounded-xl font-semibold hover:bg-primary transition shadow">
                     Update Service

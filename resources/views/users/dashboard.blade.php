@@ -16,6 +16,20 @@
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
+        <h3 class="text-sm text-gray-500">Radiologist Allocation</h3>
+        <p class="text-2xl font-bold text-accent mt-2">
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayRadiologistShare'], 2) }}
+        </p>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow">
+        <h3 class="text-sm text-gray-500">Radiographers Allocation</h3>
+        <p class="text-2xl font-bold text-accent mt-2">
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayRadiographerShare'], 2) }}
+        </p>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Expenses Today</h3>
         <p class="text-2xl font-bold text-red-600 mt-2">
             ₦{{ number_format(auth()->user()->finacialCalculation()['todayExpenses'], 2) }}
@@ -23,9 +37,16 @@
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
-        <h3 class="text-sm text-gray-500">Net Balance</h3>
+        <h3 class="text-sm text-gray-500">Expenses Discount</h3>
+        <p class="text-2xl font-bold text-red-600 mt-2">
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayDiscount'], 2) }}
+        </p>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow">
+        <h3 class="text-sm text-gray-500">Profit Today</h3>
         <p class="text-2xl font-bold text-secondary mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayStaffShare'], 2) }}
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayProfit'], 2) }}
         </p>
     </div>
 

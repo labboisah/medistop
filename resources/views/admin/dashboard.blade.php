@@ -20,9 +20,9 @@
 
     <!-- Revenue -->
     <div class="bg-white p-6 rounded-xl shadow">
-        <h3 class="text-sm text-gray-500">Today's Revenue</h3>
+        <h3 class="text-sm text-gray-500">Today's Gross Revenue</h3>
         <p class="text-3xl font-bold text-accent mt-2">
-            ₦{{ number_format(0, 2) }}
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayGross'], 2) }}
         </p>
     </div>
 
@@ -30,7 +30,7 @@
     <div class="bg-white p-6 rounded-xl shadow">
         <h3 class="text-sm text-gray-500">Net Balance</h3>
         <p class="text-3xl font-bold text-blue-700 mt-2">
-            ₦{{ number_format(0, 2) }}
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayNetRevenue'], 2) }}
         </p>
     </div>
 

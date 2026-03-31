@@ -17,20 +17,7 @@
         </button>
     </form>
 
-    <a href="{{ route('admin.reports.csv',['from'=>$from,'to'=>$to]) }}"
-        class="bg-green-600 text-white px-4 py-2 rounded-xl">
-        Download CSV
-    </a>
-
-    <form method="POST" action="{{ route('admin.reports.excel') }}">
-        @csrf
-        <input type="hidden" name="from" value="{{ $from }}">
-        <input type="hidden" name="to" value="{{ $to }}">
-
-        <button class="bg-green-600 text-white px-4 py-2 rounded-xl">
-            Download Excel
-        </button>
-    </form>
+    
 
 </div>
 <div class="bg-white p-8 rounded-2xl shadow mb-8">
@@ -90,9 +77,13 @@
         the net revenue stood at 
         <strong>₦{{ number_format($net,2) }}</strong>.
 
-        From this net revenue, the staff allocation (40%) amounted to 
+        From this net revenue, the staff allocation amounted to 
         <strong>₦{{ number_format($staffShare,2) }}</strong>, 
-        while the Annex share (60%) totaled 
+        radiologists earned 
+        <strong>₦{{ number_format($radiologistShare,2) }}</strong>,
+        radiographers earned 
+        <strong>₦{{ number_format($radiographerShare,2) }}</strong>,
+        while the Annex share totaled 
         <strong>₦{{ number_format($annexShare,2) }}</strong>.
 
         Operational expenses during this period were 
@@ -116,11 +107,19 @@
             of total gross revenue.
         </li>
         <li>
-            Staff earnings account for 40% of net revenue as per allocation policy.
+            Staff earnings account for 
+            {{ $net > 0 ? number_format(($staffShare/$net)*100,2) : 0 }}% 
+            of net revenue as per allocation policy.
         </li>
         <li>
-            Profit margin for this period is 
-            {{ $net > 0 ? number_format(($profit/$net)*100,2) : 0 }}%.
+            Radiologist earnings account for 
+            {{ $net > 0 ? number_format(($radiologistShare/$net)*100,2) : 0 }}% 
+            of net revenue as per allocation policy.
+        </li>
+        <li>
+            Radiographer earnings account for 
+            {{ $net > 0 ? number_format(($radiographerShare/$net)*100,2) : 0 }}% 
+            of net revenue as per allocation policy.
         </li>
         <li>
             Expense-to-revenue ratio stands at 
@@ -153,12 +152,14 @@
 new Chart(document.getElementById('reportChart'), {
     type: 'bar',
     data: {
-        labels: ['Gross','Discount','Staff Share','Annex Share','Expenses','Profit'],
+        labels: ['Gross','Discount','Staff Share','Radiologist Share','Radiographer Share','Annex Share','Expenses','Profit'],
         datasets: [{
             data: [
                 {{ $gross }},
                 {{ $discount }},
                 {{ $staffShare }},
+                {{ $radiologistShare }},
+                {{ $radiographerShare }},
                 {{ $annexShare }},
                 {{ $totalExpense }},
                 {{ $profit }}
@@ -169,7 +170,9 @@ new Chart(document.getElementById('reportChart'), {
                 '#16A34A',
                 '#0F2D5C',
                 '#DC2626',
-                '#10B981'
+                '#10B981',
+                '#3B82F6',
+                '{{ $profit >= 0 ? "#34D399" : "#F87171"}}'
             ]
         }]
     }

@@ -8,7 +8,10 @@ class Payment extends Model
 {
     protected $guarded = [];
     
-    public function bill() : Returntype {
+    public function bill() {
         return $this->belongsTo(Bill::class);
+    }
+    public function user() {
+        return $this->belongsTo(User::class);
     }
 }

@@ -16,19 +16,21 @@ class FinancialReportExport implements WithMultipleSheets
     protected $from;
     protected $to;
     protected $reportId;
+    protected $isAdmin;
 
-    public function __construct($from, $to, $reportId)
+    public function __construct($from, $to, $reportId, $isAdmin = false)
     {
         $this->from = $from;
         $this->to = $to;
         $this->reportId = $reportId;
+        $this->isAdmin = $isAdmin;
     }
 
     public function sheets(): array
     {
         return [
-            new Summary($this->from, $this->to, $this->reportId),
-            new DetailedBills($this->from, $this->to),
+            new Summary($this->from, $this->to, $this->reportId, $this->isAdmin),
+            new DetailedBills($this->from, $this->to, $this->isAdmin),
         ];
     }
 }

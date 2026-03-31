@@ -10,17 +10,25 @@ class DetailedBills implements FromCollection, WithHeadings
 {
     protected $from;
     protected $to;
+    protected $isAdmin;
 
-    public function __construct($from, $to)
+    public function __construct($from, $to, $isAdmin = false)
     {
         $this->from = $from;
         $this->to = $to;
+        $this->isAdmin = $isAdmin;
     }
 
     public function collection()
     {
-        return Bill::whereBetween('created_at', [$this->from,$this->to])
-            ->get()
+        $query = Bill::whereBetween('created_at', [$this->from,$this->to]);
+        
+        // If not admin, only fetch own data
+        if (!$this->isAdmin) {
+            $query->where('user_id', auth()->id());
+        }
+        
+        return $query->get()
             ->map(function($bill) {
                 return [
                     'Bill No' => $bill->bill_no,

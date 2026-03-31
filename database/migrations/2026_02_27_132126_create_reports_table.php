@@ -21,6 +21,8 @@ return new class extends Migration
             $table->decimal('net',12,2);
             $table->decimal('staff_share',12,2);
             $table->decimal('annex_share',12,2);
+            $table->decimal('radiologist_share',12,2);
+            $table->decimal('radiographer_share',12,2);
             $table->decimal('expenses',12,2);
             $table->decimal('profit',12,2);
             $table->foreignId('user_id')->constrained();

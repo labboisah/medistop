@@ -46,6 +46,7 @@ class FinanceController extends Controller
 
         $monthStaffShare = $monthNetRevenue * 0.4;
         $monthAnnexShare = $monthNetRevenue * 0.6;
+        
 
         $monthExpenses = \App\Models\Expense::whereMonth('expense_date', now()->month)
                             ->sum('amount');

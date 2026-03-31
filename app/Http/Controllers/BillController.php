@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Service;
 use App\Models\BillItem;
 use App\Models\Bill;
+use App\Services\RevenueCalculator;
 
 class BillController extends Controller
 {
@@ -56,20 +57,26 @@ class BillController extends Controller
             $service = \App\Models\Service::find($serviceId);
 
             $price = $service->price;
-            $staffShare = $price * 0.40;
-            $annexShare = $price * 0.60;
-
-            BillItem::create([
+            $rule = $service->category->revenueRule;
+            $staffShare = $price * ($rule->staff_percent / 100);
+            $annexShare = $price * ($rule->annex_percent / 100);
+            $shares = RevenueCalculator::calculate($service, $price);
+            $billItem = BillItem::create([
                 'bill_id' => $bill->id,
                 'service_id' => $service->id,
                 'price' => $price,
-                'staff_share' => $staffShare,
-                'annex_share' => $annexShare,
             ]);
 
             $totalAmount += $price;
             $totalStaffShare += $staffShare;
             $totalAnnexShare += $annexShare;
+
+            $billItem->revenueDistribution()->create([
+                'radiologist_amount' => $shares['radiologist'],
+                'radiographer_amount' => $shares['radiographer'],
+                'staff_amount' => $shares['staff'],
+                'annex_amount' => $shares['annex']
+            ]);
         }
 
         $discount = $request->discount ?? 0;
@@ -79,8 +86,6 @@ class BillController extends Controller
             'total_amount' => $totalAmount,
             'discount_amount' => $discount,
             'final_amount' => $finalAmount,
-            'total_staff_share' => $totalStaffShare,
-            'total_annex_share' => $totalAnnexShare,
             'total_paid' => 0,
             'balance' => $finalAmount,
             'payment_status' => 'unpaid',

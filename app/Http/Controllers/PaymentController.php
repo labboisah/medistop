@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Bill;
 use App\Models\Payment;
+use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -87,6 +88,12 @@ public function store(Request $request)
         'description' => 'Payment of ₦'.$request->amount.' recorded for Bill '.$bill->bill_no,
         'user_id' => auth()->id(),
     ]);
+
+    if($bill->balance == 0){
+        return redirect()
+        ->route('bills.receipt', $bill)
+        ->with('success', 'Payment recorded successfully. Pls go ahead to print the receipt.');
+    }
 
     return redirect()
         ->route('payments.create', $bill)
@@ -197,8 +204,16 @@ public function store(Request $request)
     }
     
 
-    public function receipt(Payment $payment)
+    public function receipt(Request $request, Payment $payment)
     {
+        $payment->load('bill.items.service', 'bill.items.revenueDistribution', 'user', 'bill.user');
+
+        // For in-browser printable version
+        if ($request->query('format') !== 'pdf') {
+            return view('payments.receipt', compact('payment'));
+        }
+
+        // PDF download version
         $pdf = Pdf::loadView('payments.receipt', compact('payment'));
 
         return $pdf->download('receipt-'.$payment->id.'.pdf');

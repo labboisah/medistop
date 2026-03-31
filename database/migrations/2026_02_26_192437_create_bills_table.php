@@ -16,8 +16,6 @@ return new class extends Migration
             $table->string('bill_no')->unique();
             $table->string('patient_name')->nullable();
             $table->decimal('total_amount', 12, 2)->default(0);
-            $table->decimal('total_staff_share', 12, 2)->default(0);
-            $table->decimal('total_annex_share', 12, 2)->default(0);
             $table->decimal('discount_amount', 12, 2)->default(0);
             $table->decimal('final_amount', 12, 2)->default(0);
             $table->decimal('total_paid', 12, 2)->default(0);

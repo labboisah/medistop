@@ -22,21 +22,53 @@ class Summary implements FromArray, WithEvents, WithDrawings
     protected $from;
     protected $to;
     protected $reportId;
+    protected $isAdmin;
 
-    public function __construct($from, $to, $reportId)
+    public function __construct($from, $to, $reportId, $isAdmin = false)
     {
         $this->from = $from;
         $this->to = $to;
         $this->reportId = $reportId;
+        $this->isAdmin = $isAdmin;
     }
 
     public function array(): array
     {
-        $bills = Bill::whereBetween('created_at', [$this->from,$this->to])->get();
-        $expenses = Expense::whereBetween('expense_date', [$this->from,$this->to])->get();
+        $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$this->from,$this->to]);
+        $expensesQuery = Expense::whereBetween('expense_date', [$this->from,$this->to]);
+        
+        // If not admin, only fetch own data
+        if (!$this->isAdmin) {
+            $billsQuery->where('user_id', auth()->id());
+            $expensesQuery->where('user_id', auth()->id());
+        }
+        
+        $bills = $billsQuery->get();
+        $expenses = $expensesQuery->get();
 
         $gross = $bills->sum('total_amount');
         $discount = $bills->sum('discount_amount');
+        $net = $gross - $discount;
+
+        // Calculate shares based on actual distributions
+        $staffShare = 0;
+        $annexShare = 0;
+        $radiologistShare = 0;
+        $radiographerShare = 0;
+        foreach ($bills as $bill) {
+            foreach ($bill->items as $item) {
+                $distribution = $item->revenueDistribution;
+                if ($distribution) {
+                    $staffShare += $distribution->staff_amount;
+                    $annexShare += $distribution->annex_amount;
+                    $radiologistShare += $distribution->radiologist_amount;
+                    $radiographerShare += $distribution->radiographer_amount;
+                }
+            }
+        }
+
+        $totalExpense = $expenses->sum('amount');
+        $profit = $annexShare - $totalExpense;
 
         return [
             ['ANNEX SYSTEM FINANCIAL REPORT'],
@@ -48,11 +80,13 @@ class Summary implements FromArray, WithEvents, WithDrawings
             ['FINANCIAL SUMMARY'],
             ['Gross Revenue', $gross],        // Row 8
             ['Discount', $discount],          // Row 9
-            ['Net Revenue', '=B8-B9'],        // Row 10
-            ['Staff Share (40%)', '=B10*0.4'],// Row 11
-            ['Annex Share (60%)', '=B10*0.6'],// Row 12
-            ['Expenses', $expenses->sum('amount')], // Row 13
-            ['Net Profit', '=B12-B13'],       // Row 14
+            ['Net Revenue', $net],            // Row 10
+            ['Staff Share', $staffShare],     // Row 11
+            ['Annex Share', $annexShare],     // Row 12
+            ['Radiologist Share', $radiologistShare], // Row 13
+            ['Radiographer Share', $radiographerShare], // Row 14
+            ['Expenses', $totalExpense],      // Row 15
+            ['Net Profit', $profit],          // Row 16
         ];
     }
 
@@ -67,11 +101,11 @@ class Summary implements FromArray, WithEvents, WithDrawings
                     ->getFont()->setBold(true)->setSize(16);
 
                 // Bold financial labels
-                $event->sheet->getStyle('A7:A13')
+                $event->sheet->getStyle('A7:A16')
                     ->getFont()->setBold(true);
 
                 // Currency format
-                $event->sheet->getStyle('B7:B13')
+                $event->sheet->getStyle('B7:B16')
                     ->getNumberFormat()
                     ->setFormatCode('#,##0.00');
 
@@ -81,15 +115,15 @@ class Summary implements FromArray, WithEvents, WithDrawings
 
                 /* ---------- ADD CHART ---------- */
                 $dataSeriesLabels = [
-                    new DataSeriesValues('String', 'Summary!$A$7:$A$13', null, 7),
+                    new DataSeriesValues('String', 'Summary!$A$7:$A$16', null, 10),
                 ];
 
                 $xAxisTickValues = [
-                    new DataSeriesValues('String', 'Summary!$A$7:$A$13', null, 7),
+                    new DataSeriesValues('String', 'Summary!$A$7:$A$16', null, 10),
                 ];
 
                 $dataSeriesValues = [
-                    new DataSeriesValues('Number', 'Summary!$B$7:$B$13', null, 7),
+                    new DataSeriesValues('Number', 'Summary!$B$7:$B$16', null, 10),
                 ];
 
                 $series = new DataSeries(

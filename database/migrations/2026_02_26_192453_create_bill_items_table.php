@@ -16,8 +16,6 @@ return new class extends Migration
             $table->foreignId('bill_id')->constrained()->cascadeOnDelete();
             $table->foreignId('service_id')->constrained()->cascadeOnDelete();
             $table->decimal('price', 12, 2);
-            $table->decimal('staff_share', 12, 2);
-            $table->decimal('annex_share', 12, 2);
             $table->timestamps();
         });
     }

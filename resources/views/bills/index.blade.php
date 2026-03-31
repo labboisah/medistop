@@ -22,7 +22,10 @@
                 <th class="py-3">Bill No</th>
                 <th>Patient</th>
                 <th>Total (₦)</th>
-                <th>Staff Share</th>
+                <th>Staff</th>
+                <th>Annex</th>
+                <th>Radiologist</th>
+                <th>Radiographer</th>
                 <th>Date</th>
                 <th class="text-right">Action</th>
             </tr>
@@ -32,7 +35,7 @@
         @foreach($bills as $bill)
             <tr class="border-b hover:bg-lightbg">
                 <td class="py-3 font-semibold text-primary">
-                    {{ $bill->bill_no }}
+                    BILL-{{ substr($bill->bill_no, 15) }}
                 </td>
 
                 <td>
@@ -44,22 +47,47 @@
                 </td>
 
                 <td class="text-accent font-semibold">
-                    ₦{{ number_format($bill->total_staff_share,2) }}
+                    ₦{{ number_format($bill->shares()['staff'],2) }}
+                </td>
+
+                <td class="text-accent font-semibold">
+                    ₦{{ number_format($bill->shares()['annex'],2) }}
+                </td>
+
+                <td class="text-accent font-semibold">
+                    ₦{{ number_format($bill->shares()['radiologist'],2) }}
+                </td>
+
+                <td class="text-accent font-semibold">
+                    ₦{{ number_format($bill->shares()['radiographer'],2) }}
                 </td>
 
                 <td>
                     {{ $bill->created_at->format('d M Y') }}
                 </td>
 
-                <td class="text-right">
-                    <a href="{{ route('bills.show', $bill) }}"
-                       class="text-blue-600 hover:underline">
-                        View
+                <td class="space-x-2">
+                    <a href="{{ route('bills.show', $bill) }}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2.003 5.884L10 9.882l7.997-3.998A1 1 0 0017 4H3a1 1 0 00-.997 1.884z" />
+                            <path d="M18 8.118l-8 4-8-4V14a1 1 0 001 1h14a1 1 0 001-1V8.118z" />
+                        </svg>
+                        <span>View</span>
                     </a>
+
                     @if($bill->balance > 0)
-                        <a href="{{ route('payments.create', $bill) }}"
-                        class="bg-accent text-white px-6 py-3 rounded-xl">
-                            Record Payment
+                        <a href="{{ route('payments.create', $bill) }}" class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                            <span>Pay Now</span>
+                        </a>
+                    @else
+                        <a href="{{ route('payments.receipt', $bill) }}" class="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M9 2a1 1 0 00-1 1v1H5.5A1.5 1.5 0 004 5.5v11A1.5 1.5 0 005.5 18h9a1.5 1.5 0 001.5-1.5v-11A1.5 1.5 0 0014.5 4H12V3a1 1 0 00-1-1H9zM7 6h6v2H7V6zm0 3h6v2H7V9z" />
+                            </svg>
+                            <span>Receipt</span>
                         </a>
                     @endif
                 </td>

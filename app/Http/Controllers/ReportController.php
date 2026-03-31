@@ -4,9 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Bill;
 use App\Models\Expense;
+use App\Models\Report;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
-use App\Models\Report;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Storage;
 use App\Exports\FinancialReportExport;
@@ -14,9 +15,35 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
+    /**
+     * Check if the authenticated user is an admin
+     */
+    private function isAdmin()
+    {
+        return auth()->check() && auth()->user()->role === 'admin';
+    }
+
     public function index()
     {
-        return view('admin.reports.index');
+        $reports = Report::with('user')->latest()->paginate(20);
+
+        $stats = Report::selectRaw(
+            'COUNT(*) as total_reports, '
+            .'SUM(gross) as total_gross, '
+            .'SUM(discount) as total_discount, '
+            .'SUM(net) as total_net, '
+            .'SUM(staff_share) as total_staff_share, '
+            .'SUM(annex_share) as total_annex_share, '
+            .'SUM(radiologist_share) as total_radiologist_share, '
+            .'SUM(radiographer_share) as total_radiographer_share, '
+            .'SUM(expenses) as total_expenses, '
+            .'SUM(profit) as total_profit, '
+            .'AVG(profit) as avg_profit'
+        )->first();
+
+        $users = User::orderBy('name')->get();
+
+        return view('admin.reports.index', compact('reports', 'stats', 'users'));
     }
 
     public function generate(Request $request)
@@ -29,18 +56,131 @@ class ReportController extends Controller
             $to = $request->to;
         }
 
-        $bills = Bill::whereBetween('created_at', [$from,$to])->get();
-        $expenses = Expense::whereBetween('expense_date', [$from,$to])->get();
+        $selectedUserId = $request->user_id;
+
+        $reports = Report::with('user')->latest()->paginate(20);
+
+        $stats = Report::selectRaw(
+            'COUNT(*) as total_reports, '
+            .'SUM(gross) as total_gross, '
+            .'SUM(discount) as total_discount, '
+            .'SUM(net) as total_net, '
+            .'SUM(staff_share) as total_staff_share, '
+            .'SUM(annex_share) as total_annex_share, '
+            .'SUM(radiologist_share) as total_radiologist_share, '
+            .'SUM(radiographer_share) as total_radiographer_share, '
+            .'SUM(expenses) as total_expenses, '
+            .'SUM(profit) as total_profit, '
+            .'AVG(profit) as avg_profit'
+        )->first();
+
+        $users = User::orderBy('name')->get();
+
+        $billsQuery = Bill::with('items.revenueDistribution','user')->whereBetween('created_at', [$from,$to]);
+        $expensesQuery = Expense::whereBetween('expense_date', [$from,$to]);
+
+        if ($this->isAdmin() && $selectedUserId) {
+            $billsQuery->where('user_id', $selectedUserId);
+            $expensesQuery->where('user_id', $selectedUserId);
+        } elseif (!$this->isAdmin()) {
+            $billsQuery->where('user_id', auth()->id());
+            $expensesQuery->where('user_id', auth()->id());
+            $selectedUserId = auth()->id();
+        }
+
+        $bills = $billsQuery->get();
+        $expenses = $expensesQuery->get();
 
         $gross = $bills->sum('total_amount');
         $discount = $bills->sum('discount_amount');
         $net = $gross - $discount;
 
-        $staffShare = $net * 0.4;
-        $annexShare = $net * 0.6;
+        // Calculate shares based on actual distributions
+        $staffShare = 0;
+        $annexShare = 0;
+        $radiologistShare = 0;
+        $radiographerShare = 0;
+        foreach ($bills as $bill) {
+            foreach ($bill->items as $item) {
+                $distribution = $item->revenueDistribution;
+                if ($distribution) {
+                    $staffShare += $distribution->staff_amount;
+                    $annexShare += $distribution->annex_amount;
+                    $radiologistShare += $distribution->radiologist_amount;
+                    $radiographerShare += $distribution->radiographer_amount;
+                }
+            }
+        }
 
         $totalExpense = $expenses->sum('amount');
         $profit = $annexShare - $totalExpense;
+
+        // Per-user breakdown for the current query range
+        $userBreakdown = null;
+        if ($request->type == 'user-breakdown') {
+            $userAggregated = [];
+
+            foreach ($bills as $bill) {
+                $uid = $bill->user_id;
+                if (!isset($userAggregated[$uid])) {
+                    $userAggregated[$uid] = [
+                        'user_id' => $uid,
+                        'user_name' => $bill->user->name ?? 'Unknown',
+                        'gross' => 0,
+                        'discount' => 0,
+                        'net' => 0,
+                        'staff_share' => 0,
+                        'annex_share' => 0,
+                        'radiologist_share' => 0,
+                        'radiographer_share' => 0,
+                        'expenses' => 0,
+                        'profit' => 0,
+                    ];
+                }
+
+                $userAggregated[$uid]['gross'] += $bill->total_amount;
+                $userAggregated[$uid]['discount'] += $bill->discount_amount;
+                $userAggregated[$uid]['net'] += ($bill->total_amount - $bill->discount_amount);
+
+                foreach ($bill->items as $item) {
+                    $distribution = $item->revenueDistribution;
+                    if ($distribution) {
+                        $userAggregated[$uid]['staff_share'] += $distribution->staff_amount;
+                        $userAggregated[$uid]['annex_share'] += $distribution->annex_amount;
+                        $userAggregated[$uid]['radiologist_share'] += $distribution->radiologist_amount;
+                        $userAggregated[$uid]['radiographer_share'] += $distribution->radiographer_amount;
+                    }
+                }
+            }
+
+            foreach ($expenses as $expense) {
+                $uid = $expense->user_id;
+                if (!isset($userAggregated[$uid])) {
+                    $userAggregated[$uid] = [
+                        'user_id' => $uid,
+                        'user_name' => optional($expense->user)->name ?? 'Unknown',
+                        'gross' => 0,
+                        'discount' => 0,
+                        'net' => 0,
+                        'staff_share' => 0,
+                        'annex_share' => 0,
+                        'radiologist_share' => 0,
+                        'radiographer_share' => 0,
+                        'expenses' => 0,
+                        'profit' => 0,
+                    ];
+                }
+                $userAggregated[$uid]['expenses'] += $expense->amount;
+            }
+
+            foreach ($userAggregated as &$entry) {
+                $entry['profit'] = $entry['annex_share'] - $entry['expenses'];
+            }
+
+            $userBreakdown = collect($userAggregated)->values();
+
+            return view('admin.reports.index', compact('reports', 'stats', 'users', 'userBreakdown', 'from', 'to', 'selectedUserId'));
+        }
 
         $reporterName = auth()->user()->name;
         $reporterEmail = auth()->user()->email;
@@ -51,7 +191,10 @@ class ReportController extends Controller
         $data = compact(
             'bills','expenses',
             'gross','discount','net',
-            'staffShare','annexShare',
+            'staffShare',
+            'annexShare',
+            'radiologistShare',
+            'radiographerShare',
             'totalExpense','profit',
             'from','to',
             'reporterName',
@@ -81,11 +224,47 @@ class ReportController extends Controller
 
             $file = fopen('php://output','w');
 
-            fputcsv($file, ['Gross','Discount','Staff Share','Annex Share','Expenses','Profit']);
+            fputcsv($file, ['Gross','Discount','Net','Staff Share','Annex Share','Radiologist Share','Radiographer Share','Expenses','Profit']);
 
-            // calculate same logic again or reuse helper
-            // (simplified example)
-            fputcsv($file, [100000,5000,38000,57000,20000,37000]);
+            // Calculate data
+            $from = $request->from;
+            $to = $request->to;
+            $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$from,$to]);
+            $expensesQuery = Expense::whereBetween('expense_date', [$from,$to]);
+            
+            // If not admin, only export own data
+            if (!auth()->check() || auth()->user()->role !== 'admin') {
+                $billsQuery->where('user_id', auth()->id());
+                $expensesQuery->where('user_id', auth()->id());
+            }
+            
+            $bills = $billsQuery->get();
+            $expenses = $expensesQuery->get();
+
+            $gross = $bills->sum('total_amount');
+            $discount = $bills->sum('discount_amount');
+            $net = $gross - $discount;
+
+            $staffShare = 0;
+            $annexShare = 0;
+            $radiologistShare = 0;
+            $radiographerShare = 0;
+            foreach ($bills as $bill) {
+                foreach ($bill->items as $item) {
+                    $distribution = $item->revenueDistribution;
+                    if ($distribution) {
+                        $staffShare += $distribution->staff_amount;
+                        $annexShare += $distribution->annex_amount;
+                        $radiologistShare += $distribution->radiologist_amount;
+                        $radiographerShare += $distribution->radiographer_amount;
+                    }
+                }
+            }
+
+            $totalExpense = $expenses->sum('amount');
+            $profit = $annexShare - $totalExpense;
+
+            fputcsv($file, [$gross, $discount, $net, $staffShare, $annexShare, $radiologistShare, $radiographerShare, $totalExpense, $profit]);
 
             fclose($file);
         };
@@ -98,9 +277,10 @@ class ReportController extends Controller
         $from = $request->from;
         $to = $request->to;
         $reportId = 'ANNEX-' . now()->format('YmdHis');
+        $isAdmin = $this->isAdmin();
 
         return Excel::download(
-            new FinancialReportExport($from, $to, $reportId),
+            new FinancialReportExport($from, $to, $reportId, $isAdmin),
             "financial-report-$reportId.xlsx",
             \Maatwebsite\Excel\Excel::XLSX,
             ['charts' => true]
@@ -114,15 +294,39 @@ class ReportController extends Controller
         $from = $request->from;
         $to = $request->to;
 
-        $bills = Bill::whereBetween('created_at', [$from,$to])->get();
-        $expenses = Expense::whereBetween('expense_date', [$from,$to])->get();
+        $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$from,$to]);
+        $expensesQuery = Expense::whereBetween('expense_date', [$from,$to]);
+        
+        // If not admin, only export own data
+        if (!$this->isAdmin()) {
+            $billsQuery->where('user_id', auth()->id());
+            $expensesQuery->where('user_id', auth()->id());
+        }
+        
+        $bills = $billsQuery->get();
+        $expenses = $expensesQuery->get();
 
         $gross = $bills->sum('total_amount');
         $discount = $bills->sum('discount_amount');
         $net = $gross - $discount;
 
-        $staffShare = $net * 0.4;
-        $annexShare = $net * 0.6;
+        // Calculate shares based on actual distributions
+        $staffShare = 0;
+        $annexShare = 0;
+        $radiologistShare = 0;
+        $radiographerShare = 0;
+        foreach ($bills as $bill) {
+            foreach ($bill->items as $item) {
+                $distribution = $item->revenueDistribution;
+                if ($distribution) {
+                    $staffShare += $distribution->staff_amount;
+                    $annexShare += $distribution->annex_amount;
+                    $radiologistShare += $distribution->radiologist_amount;
+                    $radiographerShare += $distribution->radiographer_amount;
+                }
+            }
+        }
+
         $totalExpense = $expenses->sum('amount');
         $profit = $annexShare - $totalExpense;
 
@@ -131,7 +335,6 @@ class ReportController extends Controller
         $reporterEmail = auth()->user()->email;
         $generatedDate = now()->format('d M Y');
         $generatedTime = now()->format('h:i A');
-        $reportId = 'ANNEX-' . now()->format('YmdHis');
         $generatedReport = Report::create([
             'report_reference' => $reportId,
             'from_date' => $from,
@@ -141,6 +344,8 @@ class ReportController extends Controller
             'net' => $net,
             'staff_share' => $staffShare,
             'annex_share' => $annexShare,
+            'radiologist_share' => $radiologistShare,
+            'radiographer_share' => $radiographerShare,
             'expenses' => $totalExpense,
             'profit' => $profit,
             'user_id' => auth()->id(),
@@ -154,6 +359,7 @@ class ReportController extends Controller
         $pdf = Pdf::loadView('admin.reports.pdf', compact(
             'gross','discount','net',
             'staffShare','annexShare',
+            'radiologistShare','radiographerShare',
             'totalExpense','profit',
             'from','to',
             'chartImage',

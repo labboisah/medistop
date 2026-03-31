@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Category;
 use App\Models\Service;
+use App\Models\RevenueSharingRule;
 
 class CategoryServiceSeeder extends Seeder
 {
@@ -16,10 +17,62 @@ class CategoryServiceSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        $radiology = Category::create(['name' => 'Radiological Services']);
+        $xrays = Category::create(['name' => 'X-Rays Services']);
+        $ultrasound = Category::create(['name' => 'Ultra Sound']);
+        $specialScan = Category::create(['name' => 'Special Scan']);
+        $dopplerScan = Category::create(['name' => 'Doppler Scan']);
         $echo = Category::create(['name' => 'Echocardiography (ECHO)']);
         $ecg = Category::create(['name' => 'Electrocardiography (ECG)']);
         $lab = Category::create(['name' => 'Laboratory Services']);
+
+        $xrays->revenueSharingRule()->create([
+            'radiologist_percent' => 25,
+            'radiographer_percent' => 25,
+            'annex_percent' => 50
+        ]);
+
+        $ultrasound->revenueSharingRule()->create([
+            'radiologist_percent' => 0,
+            'radiographer_percent' => 0,
+            'annex_percent' => 60,
+            'staff_percent' => 40
+        ]);
+
+        $specialScan->revenueSharingRule()->create([
+            'radiologist_percent' => 0,
+            'radiographer_percent' => 0,
+            'annex_percent' => 60,
+            'staff_percent' => 40
+        ]);
+
+
+        $dopplerScan->revenueSharingRule()->create([
+            'radiologist_percent' => 0,
+            'radiographer_percent' => 0,
+            'annex_percent' => 60,
+            'staff_percent' => 40
+        ]);
+
+        $echo->revenueSharingRule()->create([
+            'radiologist_percent' => 0,
+            'radiographer_percent' => 0,
+            'annex_percent' => 60,
+            'staff_percent' => 40
+        ]);
+
+        $ecg->revenueSharingRule()->create([
+            'radiologist_percent' => 0,
+            'radiographer_percent' => 0,
+            'annex_percent' => 60,
+            'staff_percent' => 40
+        ]);
+
+        $lab->revenueSharingRule()->create([
+            'radiologist_percent' => 0,
+            'radiographer_percent' => 0,
+            'annex_percent' => 60,
+            'staff_percent' => 40
+        ]);
 
         /*
         |--------------------------------------------------------------------------
@@ -27,15 +80,15 @@ class CategoryServiceSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        $routineUltrasound = [
+        $ultrasoundServices = [
             'Obstetric Scan',
             'Abdominopelvic Scan',
             'Pelvic Scan',
         ];
 
-        foreach ($routineUltrasound as $service) {
+        foreach ($ultrasoundServices as $service) {
             Service::create([
-                'category_id' => $radiology->id,
+                'category_id' => $ultrasound->id,
                 'name' => $service . ' (Routine)',
                 'price' => 4000
             ]);
@@ -47,7 +100,7 @@ class CategoryServiceSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        $specialScan = [
+        $specialScanServices = [
             'BPP & FWE',
             'Lesional Scan',
             'Scrotal Scan',
@@ -63,9 +116,9 @@ class CategoryServiceSeeder extends Seeder
             'TVS',
         ];
 
-        foreach ($specialScan as $service) {
+        foreach ($specialScanServices as $service) {
             Service::create([
-                'category_id' => $radiology->id,
+                'category_id' => $specialScan->id,
                 'name' => $service . ' (Special)',
                 'price' => 6000
             ]);
@@ -77,7 +130,7 @@ class CategoryServiceSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        $dopplerScan = [
+        $dopplerScanServices = [
             'All Doppler',
             'LLL Doppler',
             'RLL Doppler',
@@ -91,9 +144,9 @@ class CategoryServiceSeeder extends Seeder
             'Transcranial Doppler',
         ];
 
-        foreach ($dopplerScan as $service) {
+        foreach ($dopplerScanServices as $service) {
             Service::create([
-                'category_id' => $radiology->id,
+                'category_id' => $dopplerScan->id,
                 'name' => $service . ' (Doppler)',
                 'price' => 15000
             ]);
@@ -130,7 +183,7 @@ class CategoryServiceSeeder extends Seeder
 
         foreach ($xrayServices as $service) {
             Service::create([
-                'category_id' => $radiology->id,
+                'category_id' => $xrays->id,
                 'name' => $service . ' (X-Ray)',
                 'price' => 5000
             ]);

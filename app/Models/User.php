@@ -109,13 +109,23 @@ class User extends Authenticatable
 
         $todayNetRevenue = $todayGross - $todayDiscount;
 
-        $todayStaffShare = $todayNetRevenue * 0.4;
-        $todayAnnexShare = $todayNetRevenue * 0.6;
+        $todayStaffShare = 0;
+        $todayAnnexShare = 0;
+        $todayRadiographerShare = 0;
+        $todayRadiologistShare = 0;
+
+        foreach($todayBills as $bill){
+            $shares = $bill->shares();
+            $todayStaffShare += $shares['staff'];
+            $todayAnnexShare += $shares['annex'];
+            $todayRadiographerShare += $shares['radiographer'];
+            $todayRadiologistShare += $shares['radiologist'];
+        }
 
         $todayExpenses = \App\Models\Expense::whereDate('expense_date', today())
                             ->sum('amount');
 
-        $todayProfit = $todayAnnexShare - $todayExpenses;
+        $todayProfit = $todayNetRevenue - ($todayExpenses + $todayRadiologistShare + $todayRadiographerShare + $todayStaffShare);
 
 
         /* =========================
@@ -128,9 +138,19 @@ class User extends Authenticatable
         $monthDiscount = $monthBills->sum('discount_amount');
 
         $monthNetRevenue = $monthGross - $monthDiscount;
+        $monthStaffShare = 0;
+        $monthAnnexShare = 0;
+        $monthRadiographerShare = 0;
+        $monthRadiologistShare = 0;
 
-        $monthStaffShare = $monthNetRevenue * 0.4;
-        $monthAnnexShare = $monthNetRevenue * 0.6;
+        foreach($monthBills as $bill){
+            $shares = $bill->shares();
+            $monthStaffShare += $shares['staff'];
+            $monthAnnexShare += $shares['annex'];
+            $monthRadiographerShare += $shares['radiographer'];
+            $monthRadiologistShare += $shares['radiologist'];
+        }
+        
 
         $monthExpenses = \App\Models\Expense::whereMonth('expense_date', now()->month)
                             ->sum('amount');
@@ -144,6 +164,8 @@ class User extends Authenticatable
             'todayNetRevenue' => $todayNetRevenue,
             'todayStaffShare' => $todayStaffShare,
             'todayAnnexShare' => $todayAnnexShare,
+            'todayRadiographerShare' => $todayRadiographerShare,
+            'todayRadiologistShare' => $todayRadiologistShare,
             'todayExpenses' => $todayExpenses,
             'todayProfit' => $todayProfit,
             'monthGross' => $monthGross,
@@ -151,6 +173,8 @@ class User extends Authenticatable
             'monthNetRevenue' => $monthNetRevenue,
             'monthStaffShare' => $monthStaffShare,
             'monthAnnexShare' => $monthAnnexShare,
+            'monthRadiographerShare' => $monthRadiographerShare,
+            'monthRadiologistShare' => $monthRadiologistShare,
             'monthExpenses' => $monthExpenses,
             'monthProfit' => $monthProfit,
         ];

@@ -34,4 +34,28 @@ class Bill extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function shares() {
+        $annexShares = 0;
+        $radiologistShares = 0;
+        $staffShares = 0;
+        $radiographerShares = 0;
+        $amount = 0;
+
+        foreach($this->items as $item){
+            $shares = $item->shares();
+            $annexShares += $shares['annex'];
+            $radiographerShares += $shares['radiographer'];
+            $staffShares += $shares['staff'];
+            $radiologistShares += $shares['radiologist'];
+            $amount += $shares['amount'];
+        }
+        return [
+            'annex'=> $annexShares,
+            'radiologist'=> $radiologistShares,
+            'radiographer'=> $radiographerShares,
+            'staff'=> $staffShares,
+            'amount'=> $amount,
+        ];
+    }
 }
