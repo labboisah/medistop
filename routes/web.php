@@ -99,7 +99,7 @@ Route::middleware(['auth', 'user'])->group(function () {
             [PaymentController::class, 'destroy'])
             ->name('destroy');
 
-        Route::get('{payment}/receipt', 
+        Route::get('{bill}/receipt/{type?}', 
             [PaymentController::class, 'receipt'])
             ->name('receipt');    
 

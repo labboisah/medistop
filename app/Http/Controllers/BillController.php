@@ -91,7 +91,7 @@ class BillController extends Controller
             'payment_status' => 'unpaid',
         ]);
 
-        return redirect()->route('dashboard')
+        return redirect()->route('payments.create',$bill)
             ->with('success', 'Bill recorded successfully.');
     }
 

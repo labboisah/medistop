@@ -91,7 +91,7 @@ public function store(Request $request)
 
     if($bill->balance == 0){
         return redirect()
-        ->route('bills.receipt', $bill)
+        ->route('payments.receipt', $bill)
         ->with('success', 'Payment recorded successfully. Pls go ahead to print the receipt.');
     }
 
@@ -204,18 +204,35 @@ public function store(Request $request)
     }
     
 
-    public function receipt(Request $request, Payment $payment)
+    public function receipt(Request $request, Bill $bill)
     {
-        $payment->load('bill.items.service', 'bill.items.revenueDistribution', 'user', 'bill.user');
+        // Load bill relationships
+        $bill->load([
+            'items.service',
+            'items.revenueDistribution',
+            'user',
+            'payments.user' // assuming bill has payments
+        ]);
 
+        // Get the latest payment (or adjust as needed)
+        $payment = $bill->payments()->latest()->first();
+
+        if (!$payment) {
+            abort(404, 'Payment not found');
+        }
+        if ($request->type === 'thermal') {
+            return view('payments.thermalReceipt', compact(
+                'bill', 
+            ));
+        }
         // For in-browser printable version
         if ($request->query('format') !== 'pdf') {
-            return view('payments.receipt', compact('payment'));
+            return view('payments.receipt', compact('payment', 'bill'));
         }
 
         // PDF download version
-        $pdf = Pdf::loadView('payments.receipt', compact('payment'));
+        $pdf = Pdf::loadView('payments.receipt', compact('payment', 'bill'));
 
-        return $pdf->download('receipt-'.$payment->id.'.pdf');
+        return $pdf->download('receipt-' . $payment->id . '.pdf');
     }
 }
