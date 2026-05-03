@@ -86,6 +86,9 @@
         while the Annex share totaled 
         <strong>₦{{ number_format($annexShare,2) }}</strong>.
 
+        During the selected period, total refunds were 
+        <strong>₦{{ number_format($refundsTotal,2) }}</strong>.
+
         Operational expenses during this period were 
         <strong>₦{{ number_format($totalExpense,2) }}</strong>, 
         resulting in a net profit of 
@@ -105,6 +108,11 @@
             Discount impact represents 
             {{ $gross > 0 ? number_format(($discount/$gross)*100,2) : 0 }}% 
             of total gross revenue.
+        </li>
+        <li>
+            Refunds reduced revenue by 
+            {{ $gross > 0 ? number_format(($refundsTotal/$gross)*100,2) : 0 }}% 
+            during the selected period.
         </li>
         <li>
             Staff earnings account for 

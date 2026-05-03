@@ -119,11 +119,12 @@
 </tr>
 <tr>
     <th>Radiographer Share</th><td>₦{{ number_format($radiographerShare,2) }}</td>
-    <th>Total Expenses</th><td>₦{{ number_format($totalExpense,2) }}</td>
+    <th>Refunds</th><td>₦{{ number_format($refundsTotal,2) }}</td>
 </tr>
 <tr>
+    <th>Total Expenses</th><td>₦{{ number_format($totalExpense,2) }}</td>
     <th>Net Profit</th>
-    <td style="color: {{ $profit >= 0 ? 'green' : 'red' }}" colspan="3">
+    <td style="color: {{ $profit >= 0 ? 'green' : 'red' }}">
         ₦{{ number_format($profit,2) }}
     </td>
 </tr>

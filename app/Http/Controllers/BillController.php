@@ -100,7 +100,7 @@ class BillController extends Controller
      */
     public function show(\App\Models\Bill $bill)
     {
-        $bill->load('items.service', 'user');
+        $bill->load('items.service', 'user', 'refunds');
 
         return view('bills.show', compact('bill'));
     }

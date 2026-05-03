@@ -28,14 +28,15 @@ class DetailedBills implements FromCollection, WithHeadings
             $query->where('user_id', auth()->id());
         }
         
-        return $query->get()
+        return $query->with('refunds')->get()
             ->map(function($bill) {
                 return [
                     'Bill No' => $bill->bill_no,
                     'Date' => $bill->created_at->format('d M Y'),
                     'Total' => $bill->total_amount,
                     'Discount' => $bill->discount_amount,
-                    'Net' => $bill->total_amount - $bill->discount_amount
+                    'Refunds' => $bill->refunds->sum('amount'),
+                    'Net' => $bill->total_amount - $bill->discount_amount - $bill->refunds->sum('amount')
                 ];
             });
     }
@@ -47,6 +48,7 @@ class DetailedBills implements FromCollection, WithHeadings
             'Date',
             'Total',
             'Discount',
+            'Refunds',
             'Net'
         ];
     }

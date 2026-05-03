@@ -30,6 +30,13 @@
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
+        <h3 class="text-sm text-gray-500">Refunds Today</h3>
+        <p class="text-2xl font-bold text-red-600 mt-2">
+            ₦{{ number_format(auth()->user()->finacialCalculation()['todayRefunds'], 2) }}
+        </p>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Expenses Today</h3>
         <p class="text-2xl font-bold text-red-600 mt-2">
             ₦{{ number_format(auth()->user()->finacialCalculation()['todayExpenses'], 2) }}
@@ -58,6 +65,11 @@
     <a href="{{route('bills.index')}}"
        class="bg-primary text-white p-6 rounded-2xl shadow hover:bg-secondary transition">
         📝 Bills
+    </a>
+
+    <a href="{{route('refunds.index')}}"
+       class="bg-red-700 text-white p-6 rounded-2xl shadow hover:bg-red-800 transition">
+        🔄 Refunds
     </a>
 
     <a href="{{route('expenses.index')}}"

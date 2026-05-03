@@ -125,7 +125,10 @@ class User extends Authenticatable
         $todayExpenses = \App\Models\Expense::whereDate('expense_date', today())
                             ->sum('amount');
 
-        $todayProfit = $todayNetRevenue - ($todayExpenses + $todayRadiologistShare + $todayRadiographerShare + $todayStaffShare);
+        $todayRefunds = \App\Models\BillRefund::whereDate('created_at', today())
+                            ->sum('amount');
+
+        $todayProfit = $todayNetRevenue - ($todayExpenses + $todayRadiologistShare + $todayRadiographerShare + $todayStaffShare + $todayRefunds);
 
 
         /* =========================
@@ -155,7 +158,10 @@ class User extends Authenticatable
         $monthExpenses = \App\Models\Expense::whereMonth('expense_date', now()->month)
                             ->sum('amount');
 
-        $monthProfit = $monthAnnexShare - $monthExpenses;
+        $monthRefunds = \App\Models\BillRefund::whereMonth('created_at', now()->month)
+                            ->sum('amount');
+
+        $monthProfit = $monthAnnexShare - $monthExpenses - $monthRefunds;
 
         
         return [
@@ -167,6 +173,7 @@ class User extends Authenticatable
             'todayRadiographerShare' => $todayRadiographerShare,
             'todayRadiologistShare' => $todayRadiologistShare,
             'todayExpenses' => $todayExpenses,
+            'todayRefunds' => $todayRefunds,
             'todayProfit' => $todayProfit,
             'monthGross' => $monthGross,
             'monthDiscount' => $monthDiscount,
@@ -176,6 +183,7 @@ class User extends Authenticatable
             'monthRadiographerShare' => $monthRadiographerShare,
             'monthRadiologistShare' => $monthRadiologistShare,
             'monthExpenses' => $monthExpenses,
+            'monthRefunds' => $monthRefunds,
             'monthProfit' => $monthProfit,
         ];
 

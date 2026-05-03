@@ -3,6 +3,7 @@
 namespace App\Exports\Sheets;
 
 use App\Models\Bill;
+use App\Models\BillRefund;
 use App\Models\Expense;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
@@ -36,19 +37,22 @@ class Summary implements FromArray, WithEvents, WithDrawings
     {
         $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$this->from,$this->to]);
         $expensesQuery = Expense::whereBetween('expense_date', [$this->from,$this->to]);
+        $refundsQuery = BillRefund::whereBetween('created_at', [$this->from,$this->to]);
         
         // If not admin, only fetch own data
         if (!$this->isAdmin) {
             $billsQuery->where('user_id', auth()->id());
             $expensesQuery->where('user_id', auth()->id());
+            $refundsQuery->where('user_id', auth()->id());
         }
         
         $bills = $billsQuery->get();
         $expenses = $expensesQuery->get();
+        $refundsTotal = $refundsQuery->sum('amount');
 
         $gross = $bills->sum('total_amount');
         $discount = $bills->sum('discount_amount');
-        $net = $gross - $discount;
+        $net = $gross - $discount - $refundsTotal;
 
         // Calculate shares based on actual distributions
         $staffShare = 0;
@@ -80,13 +84,14 @@ class Summary implements FromArray, WithEvents, WithDrawings
             ['FINANCIAL SUMMARY'],
             ['Gross Revenue', $gross],        // Row 8
             ['Discount', $discount],          // Row 9
-            ['Net Revenue', $net],            // Row 10
-            ['Staff Share', $staffShare],     // Row 11
-            ['Annex Share', $annexShare],     // Row 12
-            ['Radiologist Share', $radiologistShare], // Row 13
-            ['Radiographer Share', $radiographerShare], // Row 14
-            ['Expenses', $totalExpense],      // Row 15
-            ['Net Profit', $profit],          // Row 16
+            ['Refunds', $refundsTotal],       // Row 10
+            ['Net Revenue', $net],            // Row 11
+            ['Staff Share', $staffShare],     // Row 12
+            ['Annex Share', $annexShare],     // Row 13
+            ['Radiologist Share', $radiologistShare], // Row 14
+            ['Radiographer Share', $radiographerShare], // Row 15
+            ['Expenses', $totalExpense],      // Row 16
+            ['Net Profit', $profit],          // Row 17
         ];
     }
 
@@ -101,11 +106,11 @@ class Summary implements FromArray, WithEvents, WithDrawings
                     ->getFont()->setBold(true)->setSize(16);
 
                 // Bold financial labels
-                $event->sheet->getStyle('A7:A16')
+                $event->sheet->getStyle('A7:A17')
                     ->getFont()->setBold(true);
 
                 // Currency format
-                $event->sheet->getStyle('B7:B16')
+                $event->sheet->getStyle('B7:B17')
                     ->getNumberFormat()
                     ->setFormatCode('#,##0.00');
 
@@ -115,15 +120,15 @@ class Summary implements FromArray, WithEvents, WithDrawings
 
                 /* ---------- ADD CHART ---------- */
                 $dataSeriesLabels = [
-                    new DataSeriesValues('String', 'Summary!$A$7:$A$16', null, 10),
+                    new DataSeriesValues('String', 'Summary!$A$7:$A$17', null, 11),
                 ];
 
                 $xAxisTickValues = [
-                    new DataSeriesValues('String', 'Summary!$A$7:$A$16', null, 10),
+                    new DataSeriesValues('String', 'Summary!$A$7:$A$17', null, 11),
                 ];
 
                 $dataSeriesValues = [
-                    new DataSeriesValues('Number', 'Summary!$B$7:$B$16', null, 10),
+                    new DataSeriesValues('Number', 'Summary!$B$7:$B$17', null, 11),
                 ];
 
                 $series = new DataSeries(

@@ -35,7 +35,7 @@
         @foreach($bills as $bill)
             <tr class="border-b hover:bg-lightbg">
                 <td class="py-3 font-semibold text-primary">
-                    BILL-{{ substr($bill->bill_no, 15) }}
+                    BILL-{{ $bill->bill_no }}
                 </td>
 
                 <td>
@@ -83,18 +83,14 @@
                             <span>Pay Now</span>
                         </a>
                     @else
-                        <a href="{{ route('payments.receipt', ['bill' => $bill, 'type' => 'a4']) }}" class="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M9 2a1 1 0 00-1 1v1H5.5A1.5 1.5 0 004 5.5v11A1.5 1.5 0 005.5 18h9a1.5 1.5 0 001.5-1.5v-11A1.5 1.5 0 0014.5 4H12V3a1 1 0 00-1-1H9zM7 6h6v2H7V6zm0 3h6v2H7V9z" />
-                            </svg>
-                            <span>Receipt A4</span>
-                        </a>
+                       
                         <a href="{{ route('payments.receipt', ['bill' => $bill, 'type' => 'thermal']) }}" class="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M9 2a1 1 0 00-1 1v1H5.5A1.5 1.5 0 004 5.5v11A1.5 1.5 0 005.5 18h9a1.5 1.5 0 001.5-1.5v-11A1.5 1.5 0 0014.5 4H12V3a1 1 0 00-1-1H9zM7 6h6v2H7V6zm0 3h6v2H7V9z" />
                             </svg>
                             <span>Receipt Thermal</span>
                         </a>
+                        
                     @endif
                 </td>
             </tr>

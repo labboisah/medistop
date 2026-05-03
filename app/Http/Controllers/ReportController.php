@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bill;
+use App\Models\BillRefund;
 use App\Models\Expense;
 use App\Models\Report;
 use App\Models\User;
@@ -78,22 +79,26 @@ class ReportController extends Controller
 
         $billsQuery = Bill::with('items.revenueDistribution','user')->whereBetween('created_at', [$from,$to]);
         $expensesQuery = Expense::whereBetween('expense_date', [$from,$to]);
+        $refundsQuery = BillRefund::whereBetween('created_at', [$from,$to]);
 
         if ($this->isAdmin() && $selectedUserId) {
             $billsQuery->where('user_id', $selectedUserId);
             $expensesQuery->where('user_id', $selectedUserId);
+            $refundsQuery->where('user_id', $selectedUserId);
         } elseif (!$this->isAdmin()) {
             $billsQuery->where('user_id', auth()->id());
             $expensesQuery->where('user_id', auth()->id());
+            $refundsQuery->where('user_id', auth()->id());
             $selectedUserId = auth()->id();
         }
 
         $bills = $billsQuery->get();
         $expenses = $expensesQuery->get();
+        $refundsTotal = $refundsQuery->sum('amount');
 
         $gross = $bills->sum('total_amount');
         $discount = $bills->sum('discount_amount');
-        $net = $gross - $discount;
+        $net = $gross - $discount - $refundsTotal;
 
         // Calculate shares based on actual distributions
         $staffShare = 0;
@@ -113,7 +118,7 @@ class ReportController extends Controller
         }
 
         $totalExpense = $expenses->sum('amount');
-        $profit = $annexShare - $totalExpense;
+        $profit = $annexShare - $totalExpense - $refundsTotal;
 
         // Per-user breakdown for the current query range
         $userBreakdown = null;
@@ -196,6 +201,7 @@ class ReportController extends Controller
             'radiologistShare',
             'radiographerShare',
             'totalExpense','profit',
+            'refundsTotal',
             'from','to',
             'reporterName',
             'reporterEmail',
@@ -224,26 +230,29 @@ class ReportController extends Controller
 
             $file = fopen('php://output','w');
 
-            fputcsv($file, ['Gross','Discount','Net','Staff Share','Annex Share','Radiologist Share','Radiographer Share','Expenses','Profit']);
+            fputcsv($file, ['Gross','Discount','Refunds','Net','Staff Share','Annex Share','Radiologist Share','Radiographer Share','Expenses','Profit']);
 
             // Calculate data
             $from = $request->from;
             $to = $request->to;
             $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$from,$to]);
             $expensesQuery = Expense::whereBetween('expense_date', [$from,$to]);
+            $refundsQuery = BillRefund::whereBetween('created_at', [$from,$to]);
             
             // If not admin, only export own data
             if (!auth()->check() || auth()->user()->role !== 'admin') {
                 $billsQuery->where('user_id', auth()->id());
                 $expensesQuery->where('user_id', auth()->id());
+                $refundsQuery->where('user_id', auth()->id());
             }
             
             $bills = $billsQuery->get();
             $expenses = $expensesQuery->get();
+            $refundsTotal = $refundsQuery->sum('amount');
 
             $gross = $bills->sum('total_amount');
             $discount = $bills->sum('discount_amount');
-            $net = $gross - $discount;
+            $net = $gross - $discount - $refundsTotal;
 
             $staffShare = 0;
             $annexShare = 0;
@@ -262,9 +271,9 @@ class ReportController extends Controller
             }
 
             $totalExpense = $expenses->sum('amount');
-            $profit = $annexShare - $totalExpense;
+            $profit = $annexShare - $totalExpense - $refundsTotal;
 
-            fputcsv($file, [$gross, $discount, $net, $staffShare, $annexShare, $radiologistShare, $radiographerShare, $totalExpense, $profit]);
+            fputcsv($file, [$gross, $discount, $refundsTotal, $net, $staffShare, $annexShare, $radiologistShare, $radiographerShare, $totalExpense, $profit]);
 
             fclose($file);
         };
@@ -296,19 +305,22 @@ class ReportController extends Controller
 
         $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$from,$to]);
         $expensesQuery = Expense::whereBetween('expense_date', [$from,$to]);
+        $refundsQuery = BillRefund::whereBetween('created_at', [$from,$to]);
         
         // If not admin, only export own data
         if (!$this->isAdmin()) {
             $billsQuery->where('user_id', auth()->id());
             $expensesQuery->where('user_id', auth()->id());
+            $refundsQuery->where('user_id', auth()->id());
         }
         
         $bills = $billsQuery->get();
         $expenses = $expensesQuery->get();
+        $refundsTotal = $refundsQuery->sum('amount');
 
         $gross = $bills->sum('total_amount');
         $discount = $bills->sum('discount_amount');
-        $net = $gross - $discount;
+        $net = $gross - $discount - $refundsTotal;
 
         // Calculate shares based on actual distributions
         $staffShare = 0;
@@ -328,7 +340,7 @@ class ReportController extends Controller
         }
 
         $totalExpense = $expenses->sum('amount');
-        $profit = $annexShare - $totalExpense;
+        $profit = $annexShare - $totalExpense - $refundsTotal;
 
         $reportId = 'ANNEX-' . now()->format('YmdHis');
         $reporterName = auth()->user()->name;
@@ -361,6 +373,7 @@ class ReportController extends Controller
             'staffShare','annexShare',
             'radiologistShare','radiographerShare',
             'totalExpense','profit',
+            'refundsTotal',
             'from','to',
             'chartImage',
             'reportId',

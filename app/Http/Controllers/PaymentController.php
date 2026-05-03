@@ -96,7 +96,7 @@ public function store(Request $request)
     }
 
     return redirect()
-        ->route('payments.create', $bill)
+        ->route('bills.index', $bill)
         ->with('success', 'Payment recorded successfully.');
     }
 

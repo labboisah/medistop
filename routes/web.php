@@ -9,6 +9,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\BillRefundController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -61,6 +62,13 @@ Route::middleware(['auth', 'admin'])
 Route::middleware(['auth', 'user'])->group(function () {
 
     Route::post('/pdf', [ReportController::class,'exportPdf'])->name('reports.pdf');
+
+    Route::get('refunds', [BillRefundController::class, 'index'])->name('refunds.index');
+    Route::get('refunds/create', [BillRefundController::class, 'create'])->name('refunds.create');
+    Route::post('refunds', [BillRefundController::class, 'store'])->name('refunds.store');
+    Route::get('refunds/{refund}/edit', [BillRefundController::class, 'edit'])->name('refunds.edit');
+    Route::put('refunds/{refund}', [BillRefundController::class, 'update'])->name('refunds.update');
+    Route::delete('refunds/{refund}', [BillRefundController::class, 'destroy'])->name('refunds.destroy');
 
     Route::resource('bills', BillController::class);
     Route::resource('expenses', ExpenseController::class);

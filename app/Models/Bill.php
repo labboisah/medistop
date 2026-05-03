@@ -35,6 +35,16 @@ class Bill extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function refunds()
+    {
+        return $this->hasMany(BillRefund::class);
+    }
+
+    public function totalRefunds()
+    {
+        return $this->refunds->sum('amount');
+    }
+
     public function shares() {
         $annexShares = 0;
         $radiologistShares = 0;
