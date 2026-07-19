@@ -22,6 +22,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'staff_type',
     ];
 
     /**
@@ -81,7 +82,11 @@ class User extends Authenticatable
         $monthExpenses = Expense::whereMonth('expense_date', now()->month)
             ->sum('amount');
 
-        $monthProfit = $monthPayments - $monthExpenses;
+        $monthSalaryPaid = SalaryPayment::whereYear('salary_month', now()->year)
+            ->whereMonth('salary_month', now()->month)
+            ->sum('amount');
+
+        $monthProfit = $monthPayments - ($monthExpenses + $monthSalaryPaid);
 
         return [
             'todayRevenue' => $todayRevenue,
@@ -92,6 +97,7 @@ class User extends Authenticatable
             'monthRevenue' => $monthRevenue,
             'monthPayments' => $monthPayments,
             'monthExpenses' => $monthExpenses,
+            'monthSalaryPaid' => $monthSalaryPaid,
             'monthProfit'=>$monthProfit
         ];
     }
@@ -161,7 +167,11 @@ class User extends Authenticatable
         $monthRefunds = \App\Models\BillRefund::whereMonth('created_at', now()->month)
                             ->sum('amount');
 
-        $monthProfit = $monthAnnexShare - $monthExpenses - $monthRefunds;
+        $monthSalaryPaid = SalaryPayment::whereYear('salary_month', now()->year)
+            ->whereMonth('salary_month', now()->month)
+            ->sum('amount');
+
+        $monthProfit = $monthAnnexShare - ($monthExpenses + $monthSalaryPaid + $monthRefunds);
 
         
         return [
@@ -184,6 +194,7 @@ class User extends Authenticatable
             'monthRadiologistShare' => $monthRadiologistShare,
             'monthExpenses' => $monthExpenses,
             'monthRefunds' => $monthRefunds,
+            'monthSalaryPaid' => $monthSalaryPaid,
             'monthProfit' => $monthProfit,
         ];
 

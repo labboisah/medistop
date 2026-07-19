@@ -28,6 +28,11 @@ class BillItem extends Model
         return $this->hasOne(RevenueDistribution::class);
     }
 
+    public function result()
+    {
+        return $this->hasOne(BillResult::class);
+    }
+
     public function shares() {
         return RevenueCalculator::calculate($this->service, $this->finalAmount());
     }

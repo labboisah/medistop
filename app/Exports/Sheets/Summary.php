@@ -5,6 +5,8 @@ namespace App\Exports\Sheets;
 use App\Models\Bill;
 use App\Models\BillRefund;
 use App\Models\Expense;
+use App\Models\SalaryPayment;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -38,14 +40,13 @@ class Summary implements FromArray, WithEvents, WithDrawings
         $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$this->from,$this->to]);
         $expensesQuery = Expense::whereBetween('expense_date', [$this->from,$this->to]);
         $refundsQuery = BillRefund::whereBetween('created_at', [$this->from,$this->to]);
-        
-        // If not admin, only fetch own data
+
         if (!$this->isAdmin) {
             $billsQuery->where('user_id', auth()->id());
             $expensesQuery->where('user_id', auth()->id());
             $refundsQuery->where('user_id', auth()->id());
         }
-        
+
         $bills = $billsQuery->get();
         $expenses = $expensesQuery->get();
         $refundsTotal = $refundsQuery->sum('amount');
@@ -54,7 +55,6 @@ class Summary implements FromArray, WithEvents, WithDrawings
         $discount = $bills->sum('discount_amount');
         $net = $gross - $discount - $refundsTotal;
 
-        // Calculate shares based on actual distributions
         $staffShare = 0;
         $annexShare = 0;
         $radiologistShare = 0;
@@ -72,7 +72,9 @@ class Summary implements FromArray, WithEvents, WithDrawings
         }
 
         $totalExpense = $expenses->sum('amount');
-        $profit = $annexShare - $totalExpense;
+        $salaryAmount = $this->salaryAmountForRange();
+        $totalOutflow = $totalExpense + $salaryAmount + $refundsTotal;
+        $profit = $annexShare - $totalOutflow;
 
         return [
             ['ANNEX SYSTEM FINANCIAL REPORT'],
@@ -82,16 +84,18 @@ class Summary implements FromArray, WithEvents, WithDrawings
             ['Period', "$this->from - $this->to"],
             [],
             ['FINANCIAL SUMMARY'],
-            ['Gross Revenue', $gross],        // Row 8
-            ['Discount', $discount],          // Row 9
-            ['Refunds', $refundsTotal],       // Row 10
-            ['Net Revenue', $net],            // Row 11
-            ['Staff Share', $staffShare],     // Row 12
-            ['Annex Share', $annexShare],     // Row 13
-            ['Radiologist Share', $radiologistShare], // Row 14
-            ['Radiographer Share', $radiographerShare], // Row 15
-            ['Expenses', $totalExpense],      // Row 16
-            ['Net Profit', $profit],          // Row 17
+            ['Gross Revenue', $gross],
+            ['Discount', $discount],
+            ['Refunds', $refundsTotal],
+            ['Net Revenue', $net],
+            ['Staff Share', $staffShare],
+            ['Annex Share', $annexShare],
+            ['Radiologist Share', $radiologistShare],
+            ['Radiographer Share', $radiographerShare],
+            ['Expenses', $totalExpense],
+            ['Salary', $salaryAmount],
+            ['Total Outflow', $totalOutflow],
+            ['Net Profit', $profit],
         ];
     }
 
@@ -101,34 +105,29 @@ class Summary implements FromArray, WithEvents, WithDrawings
         return [
             AfterSheet::class => function(AfterSheet $event) {
 
-                // Bold title
                 $event->sheet->getStyle('A1')
                     ->getFont()->setBold(true)->setSize(16);
 
-                // Bold financial labels
-                $event->sheet->getStyle('A7:A17')
+                $event->sheet->getStyle('A7:A18')
                     ->getFont()->setBold(true);
 
-                // Currency format
-                $event->sheet->getStyle('B7:B17')
+                $event->sheet->getStyle('B7:B18')
                     ->getNumberFormat()
                     ->setFormatCode('#,##0.00');
 
-                // Auto column width
                 $event->sheet->getDelegate()->getColumnDimension('A')->setAutoSize(true);
                 $event->sheet->getDelegate()->getColumnDimension('B')->setAutoSize(true);
 
-                /* ---------- ADD CHART ---------- */
                 $dataSeriesLabels = [
-                    new DataSeriesValues('String', 'Summary!$A$7:$A$17', null, 11),
+                    new DataSeriesValues('String', 'Summary!$A$7:$A$18', null, 12),
                 ];
 
                 $xAxisTickValues = [
-                    new DataSeriesValues('String', 'Summary!$A$7:$A$17', null, 11),
+                    new DataSeriesValues('String', 'Summary!$A$7:$A$18', null, 12),
                 ];
 
                 $dataSeriesValues = [
-                    new DataSeriesValues('Number', 'Summary!$B$7:$B$17', null, 11),
+                    new DataSeriesValues('Number', 'Summary!$B$7:$B$18', null, 12),
                 ];
 
                 $series = new DataSeries(
@@ -170,5 +169,18 @@ class Summary implements FromArray, WithEvents, WithDrawings
         $drawing->setCoordinates('D1');
 
         return $drawing;
+    }
+
+    private function salaryAmountForRange(): float
+    {
+        if (! $this->isAdmin || ! $this->from || ! $this->to) {
+            return 0;
+        }
+
+        $fromMonth = Carbon::parse($this->from)->startOfMonth()->toDateString();
+        $toMonth = Carbon::parse($this->to)->startOfMonth()->toDateString();
+
+        return (float) SalaryPayment::whereBetween('salary_month', [$fromMonth, $toMonth])
+            ->sum('amount');
     }
 }

@@ -27,7 +27,15 @@ class="w-full px-4 py-3 border rounded-xl">
 <select name="role"
 class="w-full px-4 py-3 border rounded-xl">
 <option value="user">User</option>
+<option value="staff">Staff</option>
 <option value="admin">Admin</option>
+</select>
+
+<select name="staff_type"
+class="w-full px-4 py-3 border rounded-xl">
+<option value="staff">Staff Commission</option>
+<option value="radiologist">Radiologist Commission</option>
+<option value="radiographer">Radiographer Commission</option>
 </select>
 
 <button class="bg-accent text-white px-6 py-3 rounded-xl">

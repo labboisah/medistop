@@ -18,6 +18,7 @@
         .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); opacity: 0.08; z-index: -1; }
         .signature-section { margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
         .signature-line { display: inline-block; width: 250px; border-bottom: 1px solid #000; }
+        .bill-no-box { border: 2px solid #111; display: inline-block; font-size: 22px; margin: 8px 0; padding: 8px 18px; }
 
         .badge-paid { color: green; font-weight: bold; }
         .badge-partial { color: orange; font-weight: bold; }
@@ -52,7 +53,7 @@
     <div class="header section">
         <img src="{{ asset('images/logo.png') }}" style="width:100px;">
         <h2>Payment Receipt</h2>
-        <p><strong>Bill No:</strong> {{ $bill->bill_no }}</p>
+        <div class="bill-no-box"><strong>Bill No:</strong> {{ $bill->bill_no }}</div>
         <p><strong>Receipt ID:</strong> {{ $payment->id }}</p>
         <p><strong>Date:</strong> {{ now()->format('d M Y H:i') }}</p>
     </div>
@@ -60,6 +61,7 @@
     <!-- Bill Info -->
     <div class="section">
         <h4>Bill Information</h4>
+        <p><strong>Bill No:</strong> {{ $bill->bill_no }}</p>
         <p><strong>Patient:</strong> {{ $bill->patient_name ?? 'N/A' }}</p>
         <p><strong>Bill Created By:</strong> {{ optional($bill->user)->name ?? 'Unknown' }}</p>
         <p><strong>Payment Recorded By:</strong> {{ optional($payment->user)->name ?? 'N/A' }}</p>

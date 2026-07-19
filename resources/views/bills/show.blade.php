@@ -27,6 +27,18 @@
                 Add Refund
             </a>
         </div>
+
+        @if(($bill->results_count ?? 0) === 0)
+            <form method="POST"
+                  action="{{ route('bills.destroy', $bill) }}"
+                  onsubmit="return confirm('Delete this bill?')">
+                @csrf
+                @method('DELETE')
+                <button class="bg-red-600 text-white px-6 py-3 rounded-xl">
+                    Delete Bill
+                </button>
+            </form>
+        @endif
     </div>
 
     <div class="mb-6 text-sm text-gray-600">

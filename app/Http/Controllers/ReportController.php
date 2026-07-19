@@ -6,7 +6,9 @@ use App\Models\Bill;
 use App\Models\BillRefund;
 use App\Models\Expense;
 use App\Models\Report;
+use App\Models\SalaryPayment;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -38,6 +40,7 @@ class ReportController extends Controller
             .'SUM(radiologist_share) as total_radiologist_share, '
             .'SUM(radiographer_share) as total_radiographer_share, '
             .'SUM(expenses) as total_expenses, '
+            .'SUM(salary_amount) as total_salary, '
             .'SUM(profit) as total_profit, '
             .'AVG(profit) as avg_profit'
         )->first();
@@ -71,6 +74,7 @@ class ReportController extends Controller
             .'SUM(radiologist_share) as total_radiologist_share, '
             .'SUM(radiographer_share) as total_radiographer_share, '
             .'SUM(expenses) as total_expenses, '
+            .'SUM(salary_amount) as total_salary, '
             .'SUM(profit) as total_profit, '
             .'AVG(profit) as avg_profit'
         )->first();
@@ -118,7 +122,9 @@ class ReportController extends Controller
         }
 
         $totalExpense = $expenses->sum('amount');
-        $profit = $annexShare - $totalExpense - $refundsTotal;
+        $salaryAmount = $this->salaryAmountForRange($from, $to, $this->isAdmin() && ! $selectedUserId);
+        $totalOutflow = $totalExpense + $salaryAmount + $refundsTotal;
+        $profit = $annexShare - $totalOutflow;
 
         // Per-user breakdown for the current query range
         $userBreakdown = null;
@@ -139,6 +145,7 @@ class ReportController extends Controller
                         'radiologist_share' => 0,
                         'radiographer_share' => 0,
                         'expenses' => 0,
+                        'salary_amount' => 0,
                         'profit' => 0,
                     ];
                 }
@@ -172,6 +179,7 @@ class ReportController extends Controller
                         'radiologist_share' => 0,
                         'radiographer_share' => 0,
                         'expenses' => 0,
+                        'salary_amount' => 0,
                         'profit' => 0,
                     ];
                 }
@@ -179,7 +187,7 @@ class ReportController extends Controller
             }
 
             foreach ($userAggregated as &$entry) {
-                $entry['profit'] = $entry['annex_share'] - $entry['expenses'];
+                $entry['profit'] = $entry['annex_share'] - ($entry['expenses'] + $entry['salary_amount']);
             }
 
             $userBreakdown = collect($userAggregated)->values();
@@ -200,7 +208,10 @@ class ReportController extends Controller
             'annexShare',
             'radiologistShare',
             'radiographerShare',
-            'totalExpense','profit',
+            'totalExpense',
+            'salaryAmount',
+            'totalOutflow',
+            'profit',
             'refundsTotal',
             'from','to',
             'reporterName',
@@ -230,7 +241,7 @@ class ReportController extends Controller
 
             $file = fopen('php://output','w');
 
-            fputcsv($file, ['Gross','Discount','Refunds','Net','Staff Share','Annex Share','Radiologist Share','Radiographer Share','Expenses','Profit']);
+            fputcsv($file, ['Gross','Discount','Refunds','Net','Staff Share','Annex Share','Radiologist Share','Radiographer Share','Expenses','Salary','Total Outflow','Profit']);
 
             // Calculate data
             $from = $request->from;
@@ -271,9 +282,12 @@ class ReportController extends Controller
             }
 
             $totalExpense = $expenses->sum('amount');
-            $profit = $annexShare - $totalExpense - $refundsTotal;
+            $includeSalary = auth()->check() && auth()->user()->role === 'admin';
+            $salaryAmount = $this->salaryAmountForRange($from, $to, $includeSalary);
+            $totalOutflow = $totalExpense + $salaryAmount + $refundsTotal;
+            $profit = $annexShare - $totalOutflow;
 
-            fputcsv($file, [$gross, $discount, $refundsTotal, $net, $staffShare, $annexShare, $radiologistShare, $radiographerShare, $totalExpense, $profit]);
+            fputcsv($file, [$gross, $discount, $refundsTotal, $net, $staffShare, $annexShare, $radiologistShare, $radiographerShare, $totalExpense, $salaryAmount, $totalOutflow, $profit]);
 
             fclose($file);
         };
@@ -340,7 +354,9 @@ class ReportController extends Controller
         }
 
         $totalExpense = $expenses->sum('amount');
-        $profit = $annexShare - $totalExpense - $refundsTotal;
+        $salaryAmount = $this->salaryAmountForRange($from, $to, $this->isAdmin());
+        $totalOutflow = $totalExpense + $salaryAmount + $refundsTotal;
+        $profit = $annexShare - $totalOutflow;
 
         $reportId = 'ANNEX-' . now()->format('YmdHis');
         $reporterName = auth()->user()->name;
@@ -359,6 +375,7 @@ class ReportController extends Controller
             'radiologist_share' => $radiologistShare,
             'radiographer_share' => $radiographerShare,
             'expenses' => $totalExpense,
+            'salary_amount' => $salaryAmount,
             'profit' => $profit,
             'user_id' => auth()->id(),
         ]);
@@ -372,7 +389,10 @@ class ReportController extends Controller
             'gross','discount','net',
             'staffShare','annexShare',
             'radiologistShare','radiographerShare',
-            'totalExpense','profit',
+            'totalExpense',
+            'salaryAmount',
+            'totalOutflow',
+            'profit',
             'refundsTotal',
             'from','to',
             'chartImage',
@@ -393,5 +413,18 @@ class ReportController extends Controller
         ]);
 
         return $pdf->download($reportId.'.pdf');
+    }
+
+    private function salaryAmountForRange($from, $to, bool $includeSalary): float
+    {
+        if (! $includeSalary || ! $from || ! $to) {
+            return 0;
+        }
+
+        $fromMonth = Carbon::parse($from)->startOfMonth()->toDateString();
+        $toMonth = Carbon::parse($to)->startOfMonth()->toDateString();
+
+        return (float) SalaryPayment::whereBetween('salary_month', [$fromMonth, $toMonth])
+            ->sum('amount');
     }
 }

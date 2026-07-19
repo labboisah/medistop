@@ -15,6 +15,7 @@
 
     .center { text-align: center; }
     .bold { font-weight: bold; }
+    .bill-no { border: 1px dashed #000; font-size: 16px; margin: 5px 0; padding: 4px; text-align: center; }
     .line { border-top: 1px dashed #000; margin: 5px 0; }
 
     table {
@@ -42,7 +43,7 @@
 
 <div class="line"></div>
 
-<p>Bill No: {{ $bill->bill_no }}</p>
+<div class="bill-no">Bill No: {{ $bill->bill_no }}</div>
 <p>Receipt: {{ $bill->id }}</p>
 <p>Date: {{ $bill->created_at->format('d/m/Y H:i') }}</p>
 
@@ -121,3 +122,4 @@
 
 </body>
 </html>
+

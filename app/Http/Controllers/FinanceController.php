@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SalaryPayment;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class FinanceController extends Controller
 {
@@ -13,6 +14,14 @@ class FinanceController extends Controller
     
     public function index()
     {
+        $selectedMonth = request('month', now()->format('Y-m'));
+        if (! preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
+            $selectedMonth = now()->format('Y-m');
+        }
+
+        $monthStart = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
         /* =========================
         TODAY CALCULATIONS
         ========================= */
@@ -37,7 +46,7 @@ class FinanceController extends Controller
         MONTH CALCULATIONS
         ========================= */
 
-        $monthBills = \App\Models\Bill::whereMonth('created_at', now()->month)->get();
+        $monthBills = \App\Models\Bill::whereBetween('created_at', [$monthStart, $monthEnd])->get();
 
         $monthGross = $monthBills->sum('total_amount');
         $monthDiscount = $monthBills->sum('discount_amount');
@@ -48,10 +57,17 @@ class FinanceController extends Controller
         $monthAnnexShare = $monthNetRevenue * 0.6;
         
 
-        $monthExpenses = \App\Models\Expense::whereMonth('expense_date', now()->month)
+        $monthExpenses = \App\Models\Expense::whereBetween('expense_date', [
+                                $monthStart->toDateString(),
+                                $monthEnd->toDateString(),
+                            ])
                             ->sum('amount');
 
-        $monthProfit = $monthAnnexShare - $monthExpenses;
+        $salaryPayment = SalaryPayment::whereDate('salary_month', $monthStart->toDateString())->first();
+        $monthSalaryPaid = $salaryPayment?->amount ?? 0;
+        $monthTotalOutflow = $monthExpenses + $monthSalaryPaid;
+        $monthProfit = $monthAnnexShare - $monthTotalOutflow;
+        $salaryPayments = SalaryPayment::with('user')->latest('salary_month')->paginate(12);
 
         $report = auth()->user()->finance();
         return view('admin.finances.index', compact(
@@ -68,8 +84,13 @@ class FinanceController extends Controller
             'monthStaffShare',
             'monthAnnexShare',
             'monthExpenses',
+            'monthSalaryPaid',
+            'monthTotalOutflow',
             'monthProfit',
-            'report'
+            'report',
+            'selectedMonth',
+            'salaryPayment',
+            'salaryPayments'
         ));
 
     }
@@ -87,7 +108,28 @@ class FinanceController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'salary_month' => 'required|date_format:Y-m',
+            'amount' => 'required|numeric|min:0',
+            'note' => 'nullable|string',
+        ]);
+
+        $salaryMonth = Carbon::createFromFormat('Y-m', $validated['salary_month'])
+            ->startOfMonth()
+            ->toDateString();
+
+        SalaryPayment::updateOrCreate(
+            ['salary_month' => $salaryMonth],
+            [
+                'amount' => $validated['amount'],
+                'note' => $validated['note'] ?? null,
+                'user_id' => auth()->id(),
+            ]
+        );
+
+        return redirect()
+            ->route('admin.finances.index', ['month' => $validated['salary_month']])
+            ->with('success', 'Salary payment recorded successfully.');
     }
 
     /**

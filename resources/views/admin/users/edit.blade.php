@@ -74,6 +74,11 @@
                         User
                     </option>
 
+                    <option value="staff"
+                        {{ $user->role === 'staff' ? 'selected' : '' }}>
+                        Staff
+                    </option>
+
                     <option value="admin"
                         {{ $user->role === 'admin' ? 'selected' : '' }}>
                         Admin
@@ -82,6 +87,29 @@
                 </select>
 
                 @error('role')
+                    <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium mb-2">
+                    Staff Type
+                </label>
+
+                <select name="staff_type"
+                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
+                    <option value="staff" {{ old('staff_type', $user->staff_type ?? 'staff') === 'staff' ? 'selected' : '' }}>
+                        Staff Commission
+                    </option>
+                    <option value="radiologist" {{ old('staff_type', $user->staff_type) === 'radiologist' ? 'selected' : '' }}>
+                        Radiologist Commission
+                    </option>
+                    <option value="radiographer" {{ old('staff_type', $user->staff_type) === 'radiographer' ? 'selected' : '' }}>
+                        Radiographer Commission
+                    </option>
+                </select>
+
+                @error('staff_type')
                     <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
                 @enderror
             </div>

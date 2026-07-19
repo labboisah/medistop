@@ -149,6 +149,59 @@
 
             @endif
 
+            @if(auth()->user()->role == 'staff')
+                <a href="{{ route('staff.results.index') }}"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition
+                {{ request()->routeIs('staff.results.index') || request()->routeIs('staff.results.entry') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+
+                    <svg class="w-5 h-5 text-accent"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v14l-4-2-4 2-4-2-4 2V6a2 2 0 012-2z"/>
+                    </svg>
+
+                    <span>Result Entry</span>
+                </a>
+
+                <a href="{{ route('staff.results.reports') }}"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition
+                {{ request()->routeIs('staff.results.reports') || request()->routeIs('staff.results.print') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+
+                    <svg class="w-5 h-5 text-accent"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 17v-6m4 6V7m4 10v-4M3 3v18h18"/>
+                    </svg>
+
+                    <span>Report</span>
+                </a>
+
+                <a href="{{ route('staff.results.commission') }}"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition
+                {{ request()->routeIs('staff.results.commission') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+
+                    <svg class="w-5 h-5 text-accent"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 10v2m8-6a8 8 0 11-16 0 8 8 0 0116 0z"/>
+                    </svg>
+
+                    <span>Commission</span>
+                </a>
+            @endif
+
             @if(auth()->user()->role == 'admin')
                 <a href="{{route('admin.categories.index')}}"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-secondary transition">
@@ -220,6 +273,24 @@
 
                     <span>Finance</span>
                 </a>
+
+                <a href="{{ route('admin.salaries.index') }}"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition
+                {{ request()->routeIs('admin.salaries.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+
+                    <svg class="w-5 h-5 text-accent"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 10v2m8-6a8 8 0 11-16 0 8 8 0 0116 0z"/>
+                    </svg>
+
+                    <span>Salary</span>
+                </a>
+
                 <a href="{{ route('admin.reports.index') }}"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition
                 {{ request()->routeIs('reports.*') ? 'bg-secondary text-white border-l-4 border-accent' : 'hover:bg-secondary' }}">
@@ -236,6 +307,23 @@
                     </svg>
 
                     <span>Reports</span>
+                </a>
+
+                <a href="{{ route('admin.staff-reports.index') }}"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition
+                {{ request()->routeIs('admin.staff-reports.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+
+                    <svg class="w-5 h-5 text-accent"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 17v-6m4 6V7m4 10v-4M5 20h14M5 4h14"/>
+                    </svg>
+
+                    <span>Staff Reports</span>
                 </a>
             @endif
 

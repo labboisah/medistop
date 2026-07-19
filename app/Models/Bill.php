@@ -25,6 +25,11 @@ class Bill extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function results()
+    {
+        return $this->hasMany(BillResult::class);
+    }
+
     public function items()
     {
         return $this->hasMany(BillItem::class);

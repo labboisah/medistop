@@ -21,6 +21,7 @@
                 <th class="py-3">Name</th>
                 <th>Email</th>
                 <th>Role</th>
+                <th>Staff Type</th>
                 <th class="text-right">Action</th>
             </tr>
         </thead>
@@ -32,10 +33,11 @@
                 <td>{{ $user->email }}</td>
                 <td>
                     <span class="px-3 py-1 rounded-full text-xs
-                        {{ $user->role === 'admin' ? 'bg-primary text-white' : 'bg-lightbg text-secondary' }}">
+                        {{ $user->role === 'admin' ? 'bg-primary text-white' : ($user->role === 'staff' ? 'bg-accent text-white' : 'bg-lightbg text-secondary') }}">
                         {{ strtoupper($user->role) }}
                     </span>
                 </td>
+                <td>{{ $user->role === 'staff' ? strtoupper($user->staff_type ?? 'staff') : '-' }}</td>
                 <td class="text-right">
                     <a href="{{ route('admin.users.edit', $user) }}"
                        class="text-blue-600 hover:underline">

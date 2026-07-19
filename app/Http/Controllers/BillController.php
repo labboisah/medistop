@@ -15,7 +15,7 @@ class BillController extends Controller
      */
     public function index()
     {
-        $bills = \App\Models\Bill::latest()->paginate(15);
+        $bills = \App\Models\Bill::withCount('results')->latest()->paginate(15);
 
         return view('bills.index', compact('bills'));
     }
@@ -40,7 +40,7 @@ class BillController extends Controller
             'services.*' => 'exists:services,id',
         ]);
 
-        $billNo = 'BILL-' . date('Ymd') . '-' . strtoupper(uniqid());
+        $billNo = $this->generateBillNo();
 
         $totalAmount = 0;
         $totalStaffShare = 0;
@@ -100,7 +100,7 @@ class BillController extends Controller
      */
     public function show(\App\Models\Bill $bill)
     {
-        $bill->load('items.service', 'user', 'refunds');
+        $bill->load('items.service', 'user', 'refunds')->loadCount('results');
 
         return view('bills.show', compact('bill'));
     }
@@ -124,8 +124,25 @@ class BillController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Bill $bill)
     {
-        //
+        if ($bill->results()->exists()) {
+            return back()->with('error', 'This bill cannot be deleted because a result has already been entered.');
+        }
+
+        $bill->delete();
+
+        return redirect()
+            ->route('bills.index')
+            ->with('success', 'Bill deleted successfully.');
+    }
+
+    private function generateBillNo(): string
+    {
+        do {
+            $billNo = 'B' . now()->format('ymd') . '-' . random_int(1000, 9999);
+        } while (Bill::where('bill_no', $billNo)->exists());
+
+        return $billNo;
     }
 }

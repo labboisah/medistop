@@ -5,11 +5,14 @@ use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\BillRefundController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\BillRefundController;
+use App\Http\Controllers\SalaryController;
+use App\Http\Controllers\StaffResultController;
+use App\Http\Controllers\AdminStaffReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -24,6 +27,10 @@ Route::get('/verify-report/{reference}', function ($reference) {
 });
 
 Route::get('/dashboard', function () {
+    if (auth()->user()->role === 'staff') {
+        return redirect()->route('staff.dashboard');
+    }
+
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -44,6 +51,9 @@ Route::middleware(['auth', 'admin'])
     Route::resource('services', ServiceController::class);
     Route::resource('users', UserController::class);
     Route::resource('finances', FinanceController::class);
+    Route::resource('salaries', SalaryController::class)->only(['index', 'store', 'destroy']);
+    Route::get('staff-reports', [AdminStaffReportController::class, 'index'])->name('staff-reports.index');
+    Route::get('staff-reports/download', [AdminStaffReportController::class, 'download'])->name('staff-reports.download');
 
     Route::prefix('reports')
         ->name('reports.')
@@ -115,3 +125,21 @@ Route::middleware(['auth', 'user'])->group(function () {
 
 });
 
+Route::middleware(['auth', 'staff'])
+    ->prefix('staff')
+    ->name('staff.')
+    ->group(function () {
+        Route::get('/dashboard', [StaffResultController::class, 'dashboard'])->name('dashboard');
+
+        Route::prefix('results')
+            ->name('results.')
+            ->group(function () {
+                Route::get('/', [StaffResultController::class, 'index'])->name('index');
+                Route::post('/lookup', [StaffResultController::class, 'lookup'])->name('lookup');
+                Route::get('/bills/{bill}', [StaffResultController::class, 'entry'])->name('entry');
+                Route::post('/bills/{bill}', [StaffResultController::class, 'store'])->name('store');
+                Route::get('/reports', [StaffResultController::class, 'reports'])->name('reports');
+                Route::get('/commission', [StaffResultController::class, 'commission'])->name('commission');
+                Route::get('/{result}/print', [StaffResultController::class, 'print'])->name('print');
+            });
+    });
