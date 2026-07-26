@@ -169,7 +169,8 @@
                 <div><strong>Category:</strong> {{ optional($result->billItem->service->category)->name ?? 'N/A' }}</div>
                 <div><strong>Bill Date:</strong> {{ $result->bill->created_at->format('d M Y h:i A') }}</div>
                 <div><strong>Bill Recorded By:</strong> {{ optional($result->bill->user)->name ?? 'Unknown' }}</div>
-                <div><strong>Performed By:</strong> {{ $result->staff->name }}</div>
+                <div><strong>Performed By:</strong> {{ optional($result->performer)->name ?? 'N/A' }}</div>
+                <div><strong>Reported By:</strong> {{ optional($result->reporter)->name ?? optional($result->staff)->name ?? 'N/A' }}</div>
                 <div><strong>Payment Status:</strong> {{ strtoupper($result->bill->payment_status) }}</div>
                 <div><strong>Total Paid:</strong> NGN {{ number_format($result->bill->total_paid, 2) }}</div>
             </div>

@@ -15,13 +15,13 @@ class AdminStaffReportController extends Controller
 
         $staffMembers = User::where('role', 'staff')->orderBy('name')->get();
         $results = $this->baseQuery($from, $to, $staffId)
-            ->latest('completed_at')
+            ->latest('updated_at')
             ->paginate(20)
             ->withQueryString();
 
         $results->getCollection()->transform(function (BillResult $result) {
             $result->bill_amount = $this->billAmountForResult($result);
-            $result->commission_amount = $this->commissionForResult($result);
+            $result->commission_amount = $this->commissionForDetailedResult($result);
             return $result;
         });
 
@@ -85,34 +85,91 @@ class AdminStaffReportController extends Controller
                 'billItem.service',
                 'billItem.revenueDistribution',
                 'staff',
+                'performer',
+                'reporter',
             ])
-            ->when($from, fn ($query) => $query->whereDate('completed_at', '>=', $from))
-            ->when($to, fn ($query) => $query->whereDate('completed_at', '<=', $to))
-            ->when($staffId, fn ($query) => $query->where('staff_id', $staffId));
+            ->when($from, function ($query) use ($from) {
+                $query->where(function ($dateQuery) use ($from) {
+                    $dateQuery->whereDate('performed_at', '>=', $from)
+                        ->orWhereDate('reported_at', '>=', $from)
+                        ->orWhereDate('completed_at', '>=', $from);
+                });
+            })
+            ->when($to, function ($query) use ($to) {
+                $query->where(function ($dateQuery) use ($to) {
+                    $dateQuery->whereDate('performed_at', '<=', $to)
+                        ->orWhereDate('reported_at', '<=', $to)
+                        ->orWhereDate('completed_at', '<=', $to);
+                });
+            })
+            ->when($staffId, function ($query) use ($staffId) {
+                $query->where(function ($staffQuery) use ($staffId) {
+                    $staffQuery->where('performed_by', $staffId)
+                        ->orWhere('reported_by', $staffId)
+                        ->orWhere('staff_id', $staffId);
+                });
+            });
     }
 
     private function buildSummary(?string $from, ?string $to, ?string $staffId)
     {
         return $this->baseQuery($from, $to, $staffId)
             ->get()
+            ->flatMap(function (BillResult $result) {
+                $rows = collect();
+
+                if ($result->performer) {
+                    $rows->push($this->summaryRow($result, $result->performer, 'radiographer'));
+                }
+
+                $reporter = $result->reporter ?? $result->staff;
+                if ($reporter) {
+                    $rows->push($this->summaryRow($result, $reporter, $reporter->staff_type ?? 'staff'));
+                }
+
+                return $rows;
+            })
             ->groupBy('staff_id')
-            ->map(function ($results) {
-                $staff = $results->first()->staff;
+            ->map(function ($rows) {
+                $first = $rows->first();
 
                 return [
-                    'staff_id' => $staff?->id,
-                    'staff_name' => $staff?->name ?? 'Unknown',
-                    'staff_type' => strtoupper($staff?->staff_type ?? 'staff'),
-                    'total_results' => $results->count(),
-                    'total_bill_amount' => $results->sum(fn ($result) => $this->billAmountForResult($result)),
-                    'total_commission' => $results->sum(fn ($result) => $this->commissionForResult($result)),
+                    'staff_id' => $first['staff_id'],
+                    'staff_name' => $first['staff_name'],
+                    'staff_type' => $first['staff_type'],
+                    'total_results' => $rows->count(),
+                    'total_bill_amount' => $rows->sum('bill_amount'),
+                    'total_commission' => $rows->sum('commission_amount'),
                 ];
             })
             ->sortBy('staff_name')
             ->values();
     }
 
-    private function commissionForResult(BillResult $result): float
+    private function summaryRow(BillResult $result, User $staff, string $staffType): array
+    {
+        return [
+            'staff_id' => $staff->id,
+            'staff_name' => $staff->name,
+            'staff_type' => strtoupper($staffType),
+            'bill_amount' => $this->billAmountForResult($result),
+            'commission_amount' => $this->commissionForStaffType($result, $staffType),
+        ];
+    }
+
+    private function commissionForDetailedResult(BillResult $result): float
+    {
+        if ($result->performer && $result->reporter && $result->performer->id !== $result->reporter->id) {
+            return $this->commissionForStaffType($result, 'radiographer')
+                + $this->commissionForStaffType($result, $result->reporter->staff_type ?? 'staff');
+        }
+
+        $staff = $result->reporter ?? $result->performer ?? $result->staff;
+
+        return $this->commissionForStaffType($result, $staff?->staff_type ?? 'staff');
+    }
+
+    private function commissionForStaffType(BillResult $result, string $staffType): float
     {
         $distribution = $result->billItem?->revenueDistribution;
 
@@ -120,7 +177,7 @@ class AdminStaffReportController extends Controller
             return 0;
         }
 
-        return (float) match ($result->staff?->staff_type ?? 'staff') {
+        return (float) match ($staffType) {
             'radiologist' => $distribution->radiologist_amount,
             'radiographer' => $distribution->radiographer_amount,
             default => $distribution->staff_amount,

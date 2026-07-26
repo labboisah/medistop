@@ -39,7 +39,8 @@
                 <th class="py-3 px-4 text-left">Patient</th>
                 <th class="py-3 px-4 text-left">Investigation</th>
                 <th class="py-3 px-4 text-left">Performed By</th>
-                <th class="py-3 px-4 text-left">Completed</th>
+                <th class="py-3 px-4 text-left">Reported By</th>
+                <th class="py-3 px-4 text-left">Activity Date</th>
                 <th class="py-3 px-4 text-right">Action</th>
             </tr>
         </thead>
@@ -49,15 +50,20 @@
                     <td class="py-3 px-4">{{ $result->bill->bill_no }}</td>
                     <td class="py-3 px-4">{{ $result->bill->patient_name ?? 'Walk-in' }}</td>
                     <td class="py-3 px-4">{{ $result->billItem->service->name }}</td>
-                    <td class="py-3 px-4">{{ optional($result->staff)->name ?? auth()->user()->name }}</td>
-                    <td class="py-3 px-4">{{ optional($result->completed_at)->format('d M Y h:i A') }}</td>
+                    <td class="py-3 px-4">{{ optional($result->performer)->name ?? '-' }}</td>
+                    <td class="py-3 px-4">{{ optional($result->reporter)->name ?? optional($result->staff)->name ?? '-' }}</td>
+                    <td class="py-3 px-4">{{ optional($staffType === 'radiographer' ? $result->performed_at : ($result->reported_at ?? $result->completed_at))->format('d M Y h:i A') }}</td>
                     <td class="py-3 px-4 text-right">
-                        <a href="{{ route('staff.results.print', $result) }}" class="text-primary hover:underline">Print</a>
+                        @if($result->reported_by || $result->staff_id)
+                            <a href="{{ route('staff.results.print', $result) }}" class="text-primary hover:underline">Print</a>
+                        @else
+                            <span class="text-gray-500">Performed</span>
+                        @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="py-6 text-center text-gray-500">No result has been entered yet.</td>
+                    <td colspan="7" class="py-6 text-center text-gray-500">No result has been entered yet.</td>
                 </tr>
             @endforelse
         </tbody>

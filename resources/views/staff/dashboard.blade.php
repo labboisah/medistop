@@ -40,7 +40,7 @@
                 <tr>
                     <th class="py-3 px-4 text-left">Bill No</th>
                     <th class="py-3 px-4 text-left">Investigation</th>
-                    <th class="py-3 px-4 text-left">Completed</th>
+                    <th class="py-3 px-4 text-left">Activity Date</th>
                     <th class="py-3 px-4 text-right">Action</th>
                 </tr>
             </thead>
@@ -49,9 +49,13 @@
                     <tr class="border-b">
                         <td class="py-3 px-4">{{ $result->bill->bill_no }}</td>
                         <td class="py-3 px-4">{{ $result->billItem->service->name }}</td>
-                        <td class="py-3 px-4">{{ optional($result->completed_at)->format('d M Y h:i A') }}</td>
+                        <td class="py-3 px-4">{{ optional($result->performed_at ?? $result->reported_at ?? $result->completed_at)->format('d M Y h:i A') }}</td>
                         <td class="py-3 px-4 text-right">
-                            <a href="{{ route('staff.results.print', $result) }}" class="text-primary hover:underline">Print</a>
+                            @if($result->reported_by)
+                                <a href="{{ route('staff.results.print', $result) }}" class="text-primary hover:underline">Print</a>
+                            @else
+                                <span class="text-gray-500">Performed</span>
+                            @endif
                         </td>
                     </tr>
                 @empty

@@ -12,23 +12,25 @@ class StaffResultController extends Controller
 {
     public function dashboard()
     {
-        $todayResults = BillResult::where('staff_id', auth()->id())
-            ->whereDate('completed_at', today())
+        $dateColumn = $this->activityDateColumn();
+
+        $todayResults = $this->activityQuery()
+            ->whereDate($dateColumn, today())
             ->count();
 
-        $monthResults = BillResult::where('staff_id', auth()->id())
-            ->whereMonth('completed_at', now()->month)
-            ->whereYear('completed_at', now()->year)
+        $monthResults = $this->activityQuery()
+            ->whereMonth($dateColumn, now()->month)
+            ->whereYear($dateColumn, now()->year)
             ->count();
 
         $monthCommission = $this->commissionQuery()
-            ->whereMonth('bill_results.completed_at', now()->month)
-            ->whereYear('bill_results.completed_at', now()->year)
+            ->whereMonth($dateColumn, now()->month)
+            ->whereYear($dateColumn, now()->year)
             ->sum($this->commissionColumn());
 
-        $recentResults = BillResult::with('bill', 'billItem.service')
-            ->where('staff_id', auth()->id())
-            ->latest('completed_at')
+        $recentResults = $this->activityQuery()
+            ->with('bill', 'billItem.service')
+            ->latest($dateColumn)
             ->limit(5)
             ->get();
 
@@ -70,7 +72,8 @@ class StaffResultController extends Controller
 
         $bill->load([
             'items.service.category',
-            'items.result.staff',
+            'items.result.performer',
+            'items.result.reporter',
             'user',
             'payments.user',
         ]);
@@ -86,7 +89,9 @@ class StaffResultController extends Controller
             ],
         ])->toArray();
 
-        return view('staff.results.entry', compact('bill', 'templates', 'templatePayload'));
+        $staffType = auth()->user()->staff_type ?? 'staff';
+
+        return view('staff.results.entry', compact('bill', 'templates', 'templatePayload', 'staffType'));
     }
 
     public function store(Request $request, Bill $bill)
@@ -96,17 +101,41 @@ class StaffResultController extends Controller
         $validated = $request->validate([
             'bill_item_id' => 'required|exists:bill_items,id',
             'clinical_note' => 'nullable|string',
-            'findings' => 'required|string',
+            'findings' => auth()->user()->staff_type === 'radiographer' ? 'nullable|string' : 'required|string',
             'impression' => 'nullable|string',
             'save_template' => 'nullable|boolean',
             'template_name' => 'required_if:save_template,1|nullable|string|max:255',
         ]);
 
         $billItem = $bill->items()->whereKey($validated['bill_item_id'])->firstOrFail();
+        $staffType = auth()->user()->staff_type ?? 'staff';
 
         $existingResult = BillResult::where('bill_item_id', $billItem->id)->first();
-        if ($existingResult && $existingResult->staff_id !== auth()->id()) {
-            abort(403, 'This investigation already has a result entered by another staff member.');
+
+        if ($staffType === 'radiographer') {
+            if ($existingResult?->performed_by && $existingResult->performed_by !== auth()->id()) {
+                abort(403, 'This investigation has already been performed by another radiographer.');
+            }
+
+            BillResult::updateOrCreate(
+                ['bill_item_id' => $billItem->id],
+                [
+                    'bill_id' => $bill->id,
+                    'staff_id' => $existingResult?->staff_id ?? auth()->id(),
+                    'performed_by' => auth()->id(),
+                    'performed_at' => now(),
+                    'findings' => $existingResult?->findings ?? '',
+                    'status' => $existingResult?->reported_at ? 'completed' : 'performed',
+                ]
+            );
+
+            return redirect()
+                ->route('staff.results.entry', $bill)
+                ->with('success', 'Investigation marked as performed.');
+        }
+
+        if ($existingResult && $existingResult->reported_by && $existingResult->reported_by !== auth()->id()) {
+            abort(403, 'This investigation already has a report entered by another staff member.');
         }
 
         $result = BillResult::updateOrCreate(
@@ -114,10 +143,12 @@ class StaffResultController extends Controller
             [
                 'bill_id' => $bill->id,
                 'staff_id' => auth()->id(),
+                'reported_by' => auth()->id(),
                 'clinical_note' => $validated['clinical_note'] ?? null,
                 'findings' => $validated['findings'],
                 'impression' => $validated['impression'] ?? null,
                 'status' => 'completed',
+                'reported_at' => now(),
                 'completed_at' => now(),
             ]
         );
@@ -144,22 +175,26 @@ class StaffResultController extends Controller
     public function reports(Request $request)
     {
         [$from, $to] = $this->dateRange($request);
+        $dateColumn = $this->activityDateColumn();
 
-        $results = BillResult::with('bill', 'billItem.service', 'staff')
-            ->where('staff_id', auth()->id())
-            ->when($from, fn ($query) => $query->whereDate('completed_at', '>=', $from))
-            ->when($to, fn ($query) => $query->whereDate('completed_at', '<=', $to))
-            ->latest('completed_at')
+        $results = $this->activityQuery()
+            ->with('bill', 'billItem.service', 'performer', 'reporter', 'staff')
+            ->when($from, fn ($query) => $query->whereDate($dateColumn, '>=', $from))
+            ->when($to, fn ($query) => $query->whereDate($dateColumn, '<=', $to))
+            ->latest($dateColumn)
             ->paginate(15)
             ->withQueryString();
 
-        return view('staff.results.reports', compact('results', 'from', 'to'));
+        $staffType = auth()->user()->staff_type ?? 'staff';
+
+        return view('staff.results.reports', compact('results', 'from', 'to', 'staffType'));
     }
 
     public function commission(Request $request)
     {
         [$from, $to] = $this->dateRange($request);
         $commissionColumn = $this->commissionColumn();
+        $dateColumn = $this->activityDateColumn();
         $staffType = auth()->user()->staff_type ?? 'staff';
 
         $results = $this->commissionQuery()
@@ -168,30 +203,30 @@ class StaffResultController extends Controller
                 'bill_items.price as bill_amount',
                 $commissionColumn . ' as commission_amount',
             ])
-            ->when($from, fn ($query) => $query->whereDate('bill_results.completed_at', '>=', $from))
-            ->when($to, fn ($query) => $query->whereDate('bill_results.completed_at', '<=', $to))
+            ->when($from, fn ($query) => $query->whereDate($dateColumn, '>=', $from))
+            ->when($to, fn ($query) => $query->whereDate($dateColumn, '<=', $to))
             ->with('bill', 'billItem.service')
-            ->latest('bill_results.completed_at')
+            ->latest($dateColumn)
             ->paginate(15)
             ->withQueryString();
 
         $todayCommission = $this->commissionQuery()
-            ->whereDate('bill_results.completed_at', today())
+            ->whereDate($dateColumn, today())
             ->sum($commissionColumn);
 
         $monthCommission = $this->commissionQuery()
-            ->whereMonth('bill_results.completed_at', now()->month)
-            ->whereYear('bill_results.completed_at', now()->year)
+            ->whereMonth($dateColumn, now()->month)
+            ->whereYear($dateColumn, now()->year)
             ->sum($commissionColumn);
 
         $filteredCommission = $this->commissionQuery()
-            ->when($from, fn ($query) => $query->whereDate('bill_results.completed_at', '>=', $from))
-            ->when($to, fn ($query) => $query->whereDate('bill_results.completed_at', '<=', $to))
+            ->when($from, fn ($query) => $query->whereDate($dateColumn, '>=', $from))
+            ->when($to, fn ($query) => $query->whereDate($dateColumn, '<=', $to))
             ->sum($commissionColumn);
 
         $filteredBillAmount = $this->commissionQuery()
-            ->when($from, fn ($query) => $query->whereDate('bill_results.completed_at', '>=', $from))
-            ->when($to, fn ($query) => $query->whereDate('bill_results.completed_at', '<=', $to))
+            ->when($from, fn ($query) => $query->whereDate($dateColumn, '>=', $from))
+            ->when($to, fn ($query) => $query->whereDate($dateColumn, '<=', $to))
             ->sum('bill_items.price');
 
         return view('staff.results.commission', compact(
@@ -208,7 +243,7 @@ class StaffResultController extends Controller
 
     public function print(BillResult $result)
     {
-        if ($result->staff_id !== auth()->id()) {
+        if (($result->reported_by ?? $result->staff_id) !== auth()->id()) {
             abort(403);
         }
 
@@ -216,6 +251,8 @@ class StaffResultController extends Controller
             'bill.user',
             'bill.payments.user',
             'billItem.service.category',
+            'performer',
+            'reporter',
             'staff',
         ]);
 
@@ -236,10 +273,25 @@ class StaffResultController extends Controller
 
     private function commissionQuery()
     {
-        return BillResult::query()
-            ->where('bill_results.staff_id', auth()->id())
+        return $this->activityQuery()
             ->join('bill_items', 'bill_results.bill_item_id', '=', 'bill_items.id')
             ->leftJoin('revenue_distributions', 'bill_items.id', '=', 'revenue_distributions.bill_item_id');
+    }
+
+    private function activityQuery()
+    {
+        return BillResult::query()->where(function ($query) {
+            if ((auth()->user()->staff_type ?? 'staff') === 'radiographer') {
+                $query->where('bill_results.performed_by', auth()->id());
+                return;
+            }
+
+            $query->where('bill_results.reported_by', auth()->id())
+                ->orWhere(function ($fallback) {
+                    $fallback->whereNull('bill_results.reported_by')
+                        ->where('bill_results.staff_id', auth()->id());
+                });
+        });
     }
 
     private function commissionColumn(): string
@@ -249,6 +301,13 @@ class StaffResultController extends Controller
             'radiographer' => 'revenue_distributions.radiographer_amount',
             default => 'revenue_distributions.staff_amount',
         };
+    }
+
+    private function activityDateColumn(): string
+    {
+        return (auth()->user()->staff_type ?? 'staff') === 'radiographer'
+            ? 'bill_results.performed_at'
+            : 'bill_results.reported_at';
     }
 
     private function dateRange(Request $request): array

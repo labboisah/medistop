@@ -21,7 +21,8 @@
     @foreach($bill->items as $item)
         @php
             $result = $item->result;
-            $lockedByOtherStaff = $result && $result->staff_id !== auth()->id();
+            $isRadiographer = $staffType === 'radiographer';
+            $lockedByOtherReporter = $result && $result->reported_by && $result->reported_by !== auth()->id();
         @endphp
 
         <div class="bg-white p-6 rounded-2xl shadow">
@@ -30,16 +31,45 @@
                     <h3 class="text-xl font-bold text-primary">{{ $item->service->name }}</h3>
                     <p class="text-sm text-gray-500">{{ optional($item->service->category)->name }}</p>
                 </div>
-                @if($result)
-                    <span class="px-3 py-1 rounded-full text-xs bg-accent text-white self-start">
-                        Completed by {{ $result->staff->name }}
-                    </span>
-                @endif
+                <div class="flex flex-col gap-2 text-right">
+                    @if($result?->performed_by)
+                        <span class="px-3 py-1 rounded-full text-xs bg-blue-600 text-white self-start">
+                            Performed by {{ optional($result->performer)->name ?? 'Unknown staff' }}
+                        </span>
+                    @endif
+
+                    @if($result?->reported_by)
+                        <span class="px-3 py-1 rounded-full text-xs bg-accent text-white self-start">
+                            Reported by {{ optional($result->reporter)->name ?? 'Unknown staff' }}
+                        </span>
+                    @endif
+                </div>
             </div>
 
-            @if($lockedByOtherStaff)
+            @if($isRadiographer)
+                @if($result?->performed_by && $result->performed_by !== auth()->id())
+                    <div class="bg-lightbg p-4 rounded-xl text-sm text-gray-600">
+                        This investigation has been marked as performed by {{ optional($result->performer)->name ?? 'another staff member' }}.
+                    </div>
+                @else
+                    <form method="POST" action="{{ route('staff.results.store', $bill) }}">
+                        @csrf
+                        <input type="hidden" name="bill_item_id" value="{{ $item->id }}">
+
+                        @if($result?->performed_by)
+                            <div class="bg-lightbg p-4 rounded-xl text-sm text-gray-600 mb-4">
+                                This investigation has been marked as performed by {{ optional($result->performer)->name ?? 'you' }}.
+                            </div>
+                        @endif
+
+                        <button class="bg-accent text-white px-6 py-3 rounded-xl">
+                            {{ $result?->performed_by === auth()->id() ? 'Update Performed Status' : 'Mark as Performed' }}
+                        </button>
+                    </form>
+                @endif
+            @elseif($lockedByOtherReporter)
                 <div class="bg-lightbg p-4 rounded-xl text-sm text-gray-600">
-                    This result has already been entered by another staff member.
+                    This result has already been reported by {{ optional($result->reporter)->name ?? 'another staff member' }}.
                 </div>
             @else
                 <form method="POST" action="{{ route('staff.results.store', $bill) }}" class="space-y-5">

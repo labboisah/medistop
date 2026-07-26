@@ -72,7 +72,7 @@
     <table class="w-full text-sm">
         <thead class="border-b bg-lightbg">
             <tr>
-                <th class="py-3 px-4 text-left">Performed By</th>
+                <th class="py-3 px-4 text-left">Staff Name</th>
                 <th class="py-3 px-4 text-left">Staff Type</th>
                 <th class="py-3 px-4 text-left">Total Results</th>
                 <th class="py-3 px-4 text-right">Bill Amount</th>
@@ -108,30 +108,34 @@
         <thead class="border-b bg-lightbg">
             <tr>
                 <th class="py-3 px-4 text-left">Performed By</th>
+                <th class="py-3 px-4 text-left">Reported By</th>
                 <th class="py-3 px-4 text-left">Bill No</th>
                 <th class="py-3 px-4 text-left">Patient</th>
                 <th class="py-3 px-4 text-left">Investigation</th>
                 <th class="py-3 px-4 text-right">Bill Amount</th>
-                <th class="py-3 px-4 text-left">Completed</th>
+                <th class="py-3 px-4 text-left">Activity Date</th>
                 <th class="py-3 px-4 text-right">Commission</th>
             </tr>
         </thead>
         <tbody>
             @forelse($results as $result)
                 <tr class="border-b">
-                    <td class="py-3 px-4">{{ optional($result->staff)->name ?? 'Unknown' }}</td>
+                    <td class="py-3 px-4">{{ optional($result->performer)->name ?? '-' }}</td>
+                    <td class="py-3 px-4">{{ optional($result->reporter)->name ?? optional($result->staff)->name ?? '-' }}</td>
                     <td class="py-3 px-4">{{ $result->bill->bill_no }}</td>
                     <td class="py-3 px-4">{{ $result->bill->patient_name ?? 'Walk-in' }}</td>
                     <td class="py-3 px-4">{{ $result->billItem->service->name }}</td>
                     <td class="py-3 px-4 text-right">NGN {{ number_format($result->bill_amount ?? $result->billItem->price ?? 0, 2) }}</td>
-                    <td class="py-3 px-4">{{ optional($result->completed_at)->format('d M Y h:i A') }}</td>
+                    <td class="py-3 px-4">
+                        {{ optional($result->reported_at ?? $result->performed_at ?? $result->completed_at)->format('d M Y h:i A') }}
+                    </td>
                     <td class="py-3 px-4 text-right font-semibold text-accent">
                         NGN {{ number_format($result->commission_amount ?? 0, 2) }}
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="py-6 text-center text-gray-500">No staff work found for this filter.</td>
+                    <td colspan="8" class="py-6 text-center text-gray-500">No staff work found for this filter.</td>
                 </tr>
             @endforelse
         </tbody>

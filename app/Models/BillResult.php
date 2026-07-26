@@ -10,6 +10,10 @@ class BillResult extends Model
         'bill_id',
         'bill_item_id',
         'staff_id',
+        'performed_by',
+        'reported_by',
+        'performed_at',
+        'reported_at',
         'clinical_note',
         'findings',
         'impression',
@@ -19,6 +23,8 @@ class BillResult extends Model
 
     protected $casts = [
         'completed_at' => 'datetime',
+        'performed_at' => 'datetime',
+        'reported_at' => 'datetime',
     ];
 
     public function bill()
@@ -34,5 +40,15 @@ class BillResult extends Model
     public function staff()
     {
         return $this->belongsTo(User::class, 'staff_id');
+    }
+
+    public function performer()
+    {
+        return $this->belongsTo(User::class, 'performed_by');
+    }
+
+    public function reporter()
+    {
+        return $this->belongsTo(User::class, 'reported_by');
     }
 }
