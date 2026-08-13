@@ -9,6 +9,8 @@ class Bill extends Model
     protected $fillable = [
         'bill_no',
         'patient_name',
+        'gender',
+        'age',
         'total_amount',
         'total_staff_share',
         'total_annex_share',

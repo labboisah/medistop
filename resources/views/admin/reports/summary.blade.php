@@ -90,8 +90,6 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <canvas id="reportChart"></canvas>
 @endsection
 
@@ -106,35 +104,43 @@
 </script>
 
 <script>
-new Chart(document.getElementById('reportChart'), {
-    type: 'bar',
-    data: {
-        labels: ['Gross','Discount','Staff Share','Radiologist Share','Radiographer Share','Annex Share','Expenses','Salary','Profit'],
-        datasets: [{
-            data: [
-                {{ $gross }},
-                {{ $discount }},
-                {{ $staffShare }},
-                {{ $radiologistShare }},
-                {{ $radiographerShare }},
-                {{ $annexShare }},
-                {{ $totalExpense }},
-                {{ $salaryAmount ?? 0 }},
-                {{ $profit }}
-            ],
-            backgroundColor: [
-                '#1E4E8C',
-                '#F59E0B',
-                '#16A34A',
-                '#0F2D5C',
-                '#DC2626',
-                '#10B981',
-                '#3B82F6',
-                '#D97706',
-                '{{ $profit >= 0 ? "#34D399" : "#F87171"}}'
-            ]
-        }]
-    }
-});
+function renderReportChart() {
+    new Chart(document.getElementById('reportChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Gross','Discount','Staff Share','Radiologist Share','Radiographer Share','Annex Share','Expenses','Salary','Profit'],
+            datasets: [{
+                data: [
+                    {{ $gross }},
+                    {{ $discount }},
+                    {{ $staffShare }},
+                    {{ $radiologistShare }},
+                    {{ $radiographerShare }},
+                    {{ $annexShare }},
+                    {{ $totalExpense }},
+                    {{ $salaryAmount ?? 0 }},
+                    {{ $profit }}
+                ],
+                backgroundColor: [
+                    '#1E4E8C',
+                    '#F59E0B',
+                    '#16A34A',
+                    '#0F2D5C',
+                    '#DC2626',
+                    '#10B981',
+                    '#3B82F6',
+                    '#D97706',
+                    '{{ $profit >= 0 ? "#34D399" : "#F87171"}}'
+                ]
+            }]
+        }
+    });
+}
+
+if (window.Chart) {
+    renderReportChart();
+} else {
+    window.addEventListener('app-assets-ready', renderReportChart, { once: true });
+}
 </script>
 @endsection

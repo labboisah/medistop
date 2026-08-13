@@ -36,6 +36,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role'     => $request->role,
             'staff_type' => $request->role === 'staff' ? ($request->staff_type ?? 'staff') : null,
+            'designation'=>$request->designation
         ]);
 
         return redirect()
@@ -57,11 +58,14 @@ class UserController extends Controller
             'staff_type' => 'nullable|in:radiologist,radiographer,staff',
         ]);
 
+        
+
         $user->update([
             'name'  => $request->name,
             'email' => $request->email,
             'role'  => $request->role,
             'staff_type' => $request->role === 'staff' ? ($request->staff_type ?? 'staff') : null,
+            'designation'=>$request->designation
         ]);
 
         if ($request->filled('password')) {

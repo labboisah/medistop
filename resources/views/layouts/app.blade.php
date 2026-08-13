@@ -4,27 +4,9 @@
     <meta charset="UTF-8">
     <title>@yield('title', 'Annex System')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#0F2D5C',
-                        secondary: '#1E4E8C',
-                        accent: '#16A34A',
-                        lightbg: '#E6F0FA'
-                    }
-                }
-            }
-        }
-    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         #nprogress .bar {
             background: #16A34A !important; /* accent green */
@@ -274,6 +256,23 @@
                     <span>Finance</span>
                 </a>
 
+                <a href="{{ route('admin.expenses.index') }}"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition
+                {{ request()->routeIs('admin.expenses.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+
+                    <svg class="w-5 h-5 text-accent"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M17 9V7a4 4 0 10-8 0v2m-2 0h12l1 12H4L5 9z"/>
+                    </svg>
+
+                    <span>Expenses</span>
+                </a>
+
                 <a href="{{ route('admin.salaries.index') }}"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition
                 {{ request()->routeIs('admin.salaries.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
@@ -324,6 +323,23 @@
                     </svg>
 
                     <span>Staff Reports</span>
+                </a>
+
+                <a href="{{ route('admin.staff-performance.index') }}"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition
+                {{ request()->routeIs('admin.staff-performance.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+
+                    <svg class="w-5 h-5 text-accent"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 17v-6m4 6V7m4 10v-4M5 20h14M5 4h14"/>
+                    </svg>
+
+                    <span>Performance Audit</span>
                 </a>
             @endif
 

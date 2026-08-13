@@ -4,24 +4,9 @@
     <meta charset="UTF-8">
     <title>@yield('title', 'Annex System')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <!-- Tailwind CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#0F2D5C',
-                        secondary: '#1E4E8C',
-                        accent: '#16A34A',
-                        lightbg: '#E6F0FA'
-                    }
-                }
-            }
-        }
-    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="min-h-screen bg-lightbg">

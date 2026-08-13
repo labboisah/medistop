@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bill;
 use App\Models\BillResult;
+use App\Models\Payment;
 use App\Models\User;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -69,6 +73,67 @@ class AdminStaffReportController extends Controller
                     $row['total_results'],
                     $row['total_bill_amount'],
                     $row['total_commission'],
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function performance(Request $request)
+    {
+        [$from, $to, $userId] = $this->performanceFilters($request);
+        $users = User::orderBy('name')->get();
+        $audit = $this->buildPerformanceAudit($from, $to, $userId);
+
+        return view('admin.staff-reports.performance', [
+            'users' => $users,
+            'from' => $from,
+            'to' => $to,
+            'userId' => $userId,
+            'rows' => $audit['rows'],
+            'userSummary' => $audit['userSummary'],
+            'chartLabels' => $audit['chartLabels'],
+            'chartNetRevenue' => $audit['chartNetRevenue'],
+            'chartPayments' => $audit['chartPayments'],
+            'totalBills' => $audit['totalBills'],
+            'totalGross' => $audit['totalGross'],
+            'totalDiscount' => $audit['totalDiscount'],
+            'totalNet' => $audit['totalNet'],
+            'totalPayments' => $audit['totalPayments'],
+        ]);
+    }
+
+    public function downloadPerformance(Request $request)
+    {
+        [$from, $to, $userId] = $this->performanceFilters($request);
+        $audit = $this->buildPerformanceAudit($from, $to, $userId);
+        $filename = 'staff-performance-audit-' . now()->format('YmdHis') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=$filename",
+        ];
+
+        $callback = function () use ($audit, $from, $to) {
+            $file = fopen('php://output', 'w');
+
+            fputcsv($file, ['Staff Performance Audit']);
+            fputcsv($file, ['From', $from, 'To', $to]);
+            fputcsv($file, []);
+            fputcsv($file, ['Date', 'User', 'Bills', 'Gross', 'Discount', 'Net Revenue', 'Payments Collected']);
+
+            foreach ($audit['rows'] as $row) {
+                fputcsv($file, [
+                    $row['date'],
+                    $row['user_name'],
+                    $row['bill_count'],
+                    $row['gross'],
+                    $row['discount'],
+                    $row['net'],
+                    $row['payments'],
                 ]);
             }
 
@@ -211,6 +276,137 @@ class AdminStaffReportController extends Controller
             $validated['from'] ?? null,
             $validated['to'] ?? null,
             $validated['staff_id'] ?? null,
+        ];
+    }
+
+    private function performanceFilters(Request $request): array
+    {
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'user_id' => 'nullable|exists:users,id',
+        ]);
+
+        $from = $validated['from'] ?? now()->startOfMonth()->toDateString();
+        $to = $validated['to'] ?? now()->toDateString();
+
+        if ($to < $from) {
+            throw ValidationException::withMessages([
+                'to' => 'The to date must be after or equal to the from date.',
+            ]);
+        }
+
+        return [$from, $to, $validated['user_id'] ?? null];
+    }
+
+    private function buildPerformanceAudit(string $from, string $to, ?string $userId): array
+    {
+        $bills = Bill::with('user')
+            ->selectRaw('DATE(created_at) as report_date, user_id, COUNT(*) as bill_count, SUM(total_amount) as gross, SUM(discount_amount) as discount, SUM(final_amount) as net')
+            ->whereBetween('created_at', [
+                Carbon::parse($from)->startOfDay(),
+                Carbon::parse($to)->endOfDay(),
+            ])
+            ->when($userId, fn ($query) => $query->where('user_id', $userId))
+            ->groupBy('report_date', 'user_id')
+            ->get();
+
+        $payments = Payment::with('user')
+            ->selectRaw('DATE(created_at) as report_date, user_id, SUM(amount) as payments')
+            ->whereBetween('created_at', [
+                Carbon::parse($from)->startOfDay(),
+                Carbon::parse($to)->endOfDay(),
+            ])
+            ->when($userId, fn ($query) => $query->where('user_id', $userId))
+            ->groupBy('report_date', 'user_id')
+            ->get();
+
+        $users = User::whereIn('id', $bills->pluck('user_id')->merge($payments->pluck('user_id'))->unique())
+            ->get()
+            ->keyBy('id');
+
+        if ($userId && ! $users->has((int) $userId)) {
+            $selectedUser = User::find($userId);
+
+            if ($selectedUser) {
+                $users->put($selectedUser->id, $selectedUser);
+            }
+        }
+
+        $billMap = $bills->keyBy(fn ($bill) => $bill->report_date.'-'.$bill->user_id);
+        $paymentMap = $payments->keyBy(fn ($payment) => $payment->report_date.'-'.$payment->user_id);
+        $activeUserIds = $userId ? collect([(int) $userId]) : $users->keys();
+        $rows = collect();
+
+        foreach (CarbonPeriod::create($from, $to) as $date) {
+            $dateString = $date->toDateString();
+
+            foreach ($activeUserIds as $activeUserId) {
+                $key = $dateString.'-'.$activeUserId;
+                $bill = $billMap->get($key);
+                $payment = $paymentMap->get($key);
+
+                if (! $bill && ! $payment) {
+                    continue;
+                }
+
+                $rows->push([
+                    'date' => $dateString,
+                    'date_label' => $date->format('d M Y'),
+                    'user_id' => $activeUserId,
+                    'user_name' => optional($users->get($activeUserId))->name ?? 'Unknown',
+                    'bill_count' => (int) ($bill->bill_count ?? 0),
+                    'gross' => (float) ($bill->gross ?? 0),
+                    'discount' => (float) ($bill->discount ?? 0),
+                    'net' => (float) ($bill->net ?? 0),
+                    'payments' => (float) ($payment->payments ?? 0),
+                ]);
+            }
+        }
+
+        $dailyTotals = $rows->groupBy('date')->map(fn ($dateRows) => [
+            'net' => $dateRows->sum('net'),
+            'payments' => $dateRows->sum('payments'),
+        ]);
+
+        $chartLabels = [];
+        $chartNetRevenue = [];
+        $chartPayments = [];
+
+        foreach (CarbonPeriod::create($from, $to) as $date) {
+            $dateString = $date->toDateString();
+            $chartLabels[] = $date->format('d M');
+            $chartNetRevenue[] = round($dailyTotals[$dateString]['net'] ?? 0, 2);
+            $chartPayments[] = round($dailyTotals[$dateString]['payments'] ?? 0, 2);
+        }
+
+        $userSummary = $rows->groupBy('user_id')
+            ->map(function ($userRows) {
+                $first = $userRows->first();
+
+                return [
+                    'user_name' => $first['user_name'],
+                    'bill_count' => $userRows->sum('bill_count'),
+                    'gross' => $userRows->sum('gross'),
+                    'discount' => $userRows->sum('discount'),
+                    'net' => $userRows->sum('net'),
+                    'payments' => $userRows->sum('payments'),
+                ];
+            })
+            ->sortBy('user_name')
+            ->values();
+
+        return [
+            'rows' => $rows->sortByDesc('date')->values(),
+            'userSummary' => $userSummary,
+            'chartLabels' => $chartLabels,
+            'chartNetRevenue' => $chartNetRevenue,
+            'chartPayments' => $chartPayments,
+            'totalBills' => $rows->sum('bill_count'),
+            'totalGross' => $rows->sum('gross'),
+            'totalDiscount' => $rows->sum('discount'),
+            'totalNet' => $rows->sum('net'),
+            'totalPayments' => $rows->sum('payments'),
         ];
     }
 }

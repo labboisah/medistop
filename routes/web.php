@@ -13,11 +13,18 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\StaffResultController;
 use App\Http\Controllers\AdminStaffReportController;
+use App\Http\Controllers\LocalServerController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('welcome', [
+        'showServerControl' => LocalServerController::shouldShowControl(request()),
+    ]);
 });
+
+Route::get('/server-control/status', [LocalServerController::class, 'status'])->name('server-control.status');
+Route::post('/server-control/connect', [LocalServerController::class, 'connect'])->name('server-control.connect');
+Route::post('/server-control/disconnect', [LocalServerController::class, 'disconnect'])->name('server-control.disconnect');
 
 Route::get('/verify-report/{reference}', function ($reference) {
 
@@ -51,9 +58,16 @@ Route::middleware(['auth', 'admin'])
     Route::resource('services', ServiceController::class);
     Route::resource('users', UserController::class);
     Route::resource('finances', FinanceController::class);
+    Route::get('expenses/report', [ExpenseController::class, 'adminReport'])->name('expenses.report');
+    Route::get('expenses/download-csv', [ExpenseController::class, 'adminDownloadCsv'])->name('expenses.download-csv');
+    Route::get('expenses', [ExpenseController::class, 'adminIndex'])->name('expenses.index');
+    Route::get('expenses/create', [ExpenseController::class, 'adminCreate'])->name('expenses.create');
+    Route::post('expenses', [ExpenseController::class, 'adminStore'])->name('expenses.store');
     Route::resource('salaries', SalaryController::class)->only(['index', 'store', 'destroy']);
     Route::get('staff-reports', [AdminStaffReportController::class, 'index'])->name('staff-reports.index');
     Route::get('staff-reports/download', [AdminStaffReportController::class, 'download'])->name('staff-reports.download');
+    Route::get('staff-performance', [AdminStaffReportController::class, 'performance'])->name('staff-performance.index');
+    Route::get('staff-performance/download', [AdminStaffReportController::class, 'downloadPerformance'])->name('staff-performance.download');
 
     Route::prefix('reports')
         ->name('reports.')

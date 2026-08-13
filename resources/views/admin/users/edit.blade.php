@@ -68,25 +68,32 @@
 
                 <select name="role"
                         class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
-
                     <option value="user"
                         {{ $user->role === 'user' ? 'selected' : '' }}>
                         User
                     </option>
-
                     <option value="staff"
                         {{ $user->role === 'staff' ? 'selected' : '' }}>
                         Staff
                     </option>
-
                     <option value="admin"
                         {{ $user->role === 'admin' ? 'selected' : '' }}>
                         Admin
                     </option>
-
                 </select>
 
                 @error('role')
+                    <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+                @enderror
+            </div>
+            <div>
+                <select name="designation" class="w-full px-4 py-3 border rounded-xl">
+                    <option value="{{$user->designation}}">{{$user->designation ?? 'Select Designation'}}</option>
+                    <option value="Consultnt Radiologist">Consultnt Radiologist</option>
+                    <option value="SR, Radiologist">SR, Radiologist</option>
+                    <option value="Residence Radiologist">Residence Radiologist</option>
+                </select>
+                @error('designation')
                     <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
                 @enderror
             </div>
@@ -132,24 +139,6 @@
 
             <!-- Buttons -->
             <div class="flex justify-between items-center pt-4">
-
-                <!-- Delete Button -->
-                @if(auth()->id() !== $user->id)
-                    <form method="POST"
-                          action="{{ route('admin.users.destroy', $user) }}"
-                          onsubmit="return confirm('Are you sure you want to delete this user?')">
-                        @csrf
-                        @method('DELETE')
-
-                        <button class="text-red-600 text-sm hover:underline">
-                            Delete User
-                        </button>
-                    </form>
-                @else
-                    <span class="text-gray-400 text-sm">
-                        You cannot delete yourself
-                    </span>
-                @endif
 
                 <!-- Update -->
                 <button type="submit"

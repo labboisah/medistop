@@ -31,6 +31,13 @@ class="w-full px-4 py-3 border rounded-xl">
 <option value="admin">Admin</option>
 </select>
 
+<select name="designation"
+class="w-full px-4 py-3 border rounded-xl">
+<option value="Consultnt Radiologist">Consultnt Radiologist</option>
+<option value="SR, Radiologist">SR, Radiologist</option>
+<option value="Residence Radiologist">Residence Radiologist</option>
+</select>
+
 <select name="staff_type"
 class="w-full px-4 py-3 border rounded-xl">
 <option value="staff">Staff Commission</option>

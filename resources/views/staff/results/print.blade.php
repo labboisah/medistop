@@ -81,7 +81,7 @@
             margin-bottom: 24px;
         }
         .section {
-            margin-top: 22px;
+            margin-top: 15px;
         }
         .section h3 {
             color: #0F2D5C;
@@ -155,30 +155,22 @@
                 <div class="sub-brand">ANNEX</div>
                 <div class="address">SULTAN ABUBAKAR ROAD, MARINA</div>
                 <div class="address">Contact: 07036354477, 08035677283</div>
-                <div class="report-title">Diagnostic Report</div>
+                <div class="report-title">DIAGNOSTIC REPORT</div>
             </div>
 
             <div class="top-meta">
-                <div><strong>Bill No:</strong> {{ $result->bill->bill_no }}</div>
-                <div><strong>Result Date:</strong> {{ optional($result->completed_at)->format('d M Y h:i A') }}</div>
-            </div>
-
-            <div class="meta">
-                <div><strong>Patient:</strong> {{ $result->bill->patient_name ?? 'Walk-in' }}</div>
-                <div><strong>Investigation:</strong> {{ $result->billItem->service->name }}</div>
-                <div><strong>Category:</strong> {{ optional($result->billItem->service->category)->name ?? 'N/A' }}</div>
-                <div><strong>Bill Date:</strong> {{ $result->bill->created_at->format('d M Y h:i A') }}</div>
-                <div><strong>Bill Recorded By:</strong> {{ optional($result->bill->user)->name ?? 'Unknown' }}</div>
-                <div><strong>Performed By:</strong> {{ optional($result->performer)->name ?? 'N/A' }}</div>
-                <div><strong>Reported By:</strong> {{ optional($result->reporter)->name ?? optional($result->staff)->name ?? 'N/A' }}</div>
-                <div><strong>Payment Status:</strong> {{ strtoupper($result->bill->payment_status) }}</div>
-                <div><strong>Total Paid:</strong> NGN {{ number_format($result->bill->total_paid, 2) }}</div>
+                <div>
+                    <p style="margin-top: 3px;"><strong>Patient:</strong> {{ $result->bill->patient_name ?? 'Walk-in' }}</p>
+                    <p style="margin-top: 3px;"><strong>Gender:</strong> {{ $result->bill->gender ?? 'N/A' }}</p>
+                    <p style="margin-top: 3px;"><strong>Age:</strong> {{ $result->bill->age ?? 'N/A' }}</p>
+                    <p style="margin-top: 3px;"><strong>Category:</strong> {{ optional($result->billItem->service->category)->name ?? 'N/A' }}</p>
+                    <p style="margin-top: 3px;"><strong>Investigation:</strong> {{ $result->billItem->service->name }}</p>
+                </div>
             </div>
 
             @if($result->clinical_note)
                 <section class="section">
-                    <h3>Clinical Note</h3>
-                    <div class="content">{{ $result->clinical_note }}</div>
+                    <h3>Clinical Note: {{ $result->clinical_note }}</h3>
                 </section>
             @endif
 
@@ -195,8 +187,11 @@
             @endif
 
             <div class="signature">
-                <div class="line">Staff Signature</div>
-                <div class="line">Authorized Signature</div>
+                <div class="line">
+                    {{ optional($result->completed_at)->format('d M Y h:i A') }} <br>
+                    {{ optional($result->reporter)->name ?? 'N/A' }}<br>
+                    {{optional($result->reporter)->designation ?? 'N/A'}}
+                </div>
             </div>
         </div>
     </main>

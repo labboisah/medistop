@@ -15,12 +15,14 @@
 
 <div class="bg-white rounded-2xl shadow p-6 overflow-x-auto">
 
-    <table class="w-full text-left text-sm">
+    <table class="bordered w-full text-left text-sm">
 
         <thead class="border-b">
             <tr>
                 <th class="py-3">Bill No</th>
                 <th>Patient</th>
+                <th>Gender</th>
+                <th>Age</th>
                 <th>Total (₦)</th>
                 <th>Staff</th>
                 <th>Annex</th>
@@ -40,6 +42,12 @@
 
                 <td>
                     {{ $bill->patient_name ?? 'Walk-in' }}
+                </td>
+                <td>
+                    {{ $bill->gender ?? 'N/A' }}
+                </td>
+                <td>
+                    {{ $bill->age ?? 'N/A' }}
                 </td>
 
                 <td>

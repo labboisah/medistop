@@ -36,6 +36,8 @@ class BillController extends Controller
     {
         $request->validate([
             'patient_name' => 'nullable|string',
+            'gender' => 'nullable|in:male,female',
+            'age' => 'nullable|integer',
             'services' => 'required|array',
             'services.*' => 'exists:services,id',
         ]);
@@ -50,6 +52,8 @@ class BillController extends Controller
             'bill_no' => $billNo,
             'patient_name' => $request->patient_name,
             'user_id' => auth()->id(),
+            'gender' => $request->gender,
+            'age' => $request->age,
         ]);
 
         foreach ($request->services as $serviceId) {

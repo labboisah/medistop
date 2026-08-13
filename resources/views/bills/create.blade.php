@@ -16,6 +16,19 @@
            class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
 </div>
 <div class="mb-6">
+    <label class="block text-sm mb-2 font-medium">Gender</label>
+    <select name="gender" class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
+        <option value="">Select Gender</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+    </select>
+</div>
+<div class="mb-6">
+    <label class="block text-sm mb-2 font-medium">Age</label>
+    <input type="number" name="age"
+           class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
+</div>  
+<div class="mb-6">
     <label class="block text-sm mb-2 font-medium">Discount (₦)</label>
     <input type="number" step="0.01" name="discount"
            class="w-full px-4 py-3 border rounded-xl">

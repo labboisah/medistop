@@ -4,28 +4,9 @@
     <meta charset="UTF-8">
     <title>Annex System | Diagnostic Record Management</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <!-- Tailwind CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- AOS Animation -->
-    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#0F2D5C',
-                        secondary: '#1E4E8C',
-                        accent: '#16A34A',
-                        lightbg: '#E6F0FA'
-                    }
-                }
-            }
-        }
-    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
         .hero-bg {
@@ -44,6 +25,11 @@
                 rgba(15,45,92,0.1) 100%
             );
         }
+
+        #nprogress .bar {
+            background: #16A34A !important;
+            height: 3px;
+        }
     </style>
 </head>
 
@@ -57,7 +43,6 @@
         </h1>
 
         <div class="flex items-center gap-6">
-
             <!-- Dark Mode Toggle -->
             <button onclick="toggleDarkMode()" 
                 class="bg-gray-200 dark:bg-gray-700 p-2 rounded-lg">
@@ -102,37 +87,35 @@
                     Explore Features
                 </a>
             </div>
+
+            @if($showServerControl ?? false)
+            <div class="mt-8 inline-flex flex-col items-start gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-4 text-white shadow-xl backdrop-blur">
+                <a id="serverControlUrl"
+                    href="#"
+                    target="_blank"
+                    class="hidden text-sm font-semibold text-accent hover:underline">
+                </a>
+
+                <span id="serverControlMessage"
+                    class="hidden max-w-md text-sm font-medium">
+                </span>
+
+                <button id="serverControlButton"
+                    type="button"
+                    onclick="toggleServerConnection()"
+                    class="inline-flex items-center gap-2 bg-accent text-white px-5 py-3 rounded-lg font-semibold hover:bg-green-600 transition disabled:opacity-60 disabled:cursor-not-allowed">
+                    <svg id="serverControlIcon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M4.93 12.93a10 10 0 0114.14 0M1.394 9.393a15 15 0 0121.212 0" />
+                    </svg>
+                    <span id="serverControlLabel">Connect</span>
+                </button>
+            </div>
+            @endif
         </div>
 
         <!-- Animated Stats -->
-        <div data-aos="fade-left" 
-             class="bg-white/10 backdrop-blur-xl p-10 rounded-2xl shadow-2xl text-white">
-
-            <div class="grid grid-cols-2 gap-6 text-center">
-
-                <div>
-                    <h2 class="text-4xl font-bold counter" data-target="{{App\Models\User::find(1)->finance()['monthRevenue']}}">0</h2>
-                    <p class="text-gray-300">This Month's Revenue</p>
-                </div>
-
-                <div>
-                    <h2 class="text-4xl font-bold counter" data-target="{{App\Models\User::find(1)->finance()['monthExpenses']}}">0</h2>
-                    <p class="text-gray-300">This Month's Expenses</p>
-                </div>
-
-                <div>
-                    <h2 class="text-4xl font-bold counter" data-target="{{App\Models\User::find(1)->finance()['monthPayments']}}">0</h2>
-                    <p class="text-gray-300">This Month Payments</p>
-                </div>
-
-                <div>
-                    <h2 class="text-4xl font-bold counter" data-target="{{App\Models\User::find(1)->finance()['monthProfit']}}">0</h2>
-                    <p class="text-gray-300">This Month's Profits</p>
-                </div>
-
-            </div>
-
-        </div>
+        
 
     </div>
 </section>
@@ -316,9 +299,140 @@
 </footer>
 
 <!-- SCRIPTS -->
-<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
 <script>
-    AOS.init();
+    @if($showServerControl ?? false)
+    const serverControl = {
+        connected: false,
+        busy: false,
+        statusUrl: "{{ route('server-control.status') }}",
+        connectUrl: "{{ route('server-control.connect') }}",
+        disconnectUrl: "{{ route('server-control.disconnect') }}",
+        csrf: document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+    };
+
+    function updateServerButton(payload = {}) {
+        serverControl.connected = Boolean(payload.connected);
+
+        const button = document.getElementById('serverControlButton');
+        const label = document.getElementById('serverControlLabel');
+        const icon = document.getElementById('serverControlIcon');
+        const url = document.getElementById('serverControlUrl');
+        const message = document.getElementById('serverControlMessage');
+
+        button.disabled = serverControl.busy;
+        label.textContent = serverControl.busy
+            ? 'Please wait...'
+            : (serverControl.connected ? 'Disconnect' : 'Connect');
+
+        if (serverControl.connected && payload.url) {
+            url.href = payload.url;
+            url.textContent = payload.url;
+            url.classList.remove('hidden');
+        } else {
+            url.href = '#';
+            url.textContent = '';
+            url.classList.add('hidden');
+        }
+
+        if (payload.message) {
+            message.textContent = payload.message;
+            message.classList.remove('hidden', 'text-red-600', 'text-gray-600', 'text-accent');
+            message.classList.add(serverControl.connected ? 'text-accent' : 'text-red-600');
+        } else {
+            message.textContent = '';
+            message.classList.add('hidden');
+        }
+
+        button.classList.toggle('bg-accent', serverControl.connected);
+        button.classList.toggle('hover:bg-green-600', serverControl.connected);
+        button.classList.toggle('bg-primary', !serverControl.connected);
+        button.classList.toggle('hover:bg-secondary', !serverControl.connected);
+        icon.classList.toggle('text-white', serverControl.connected);
+    }
+
+    async function refreshServerStatus() {
+        try {
+            const response = await fetch(serverControl.statusUrl, {
+                headers: { 'Accept': 'application/json' },
+            });
+            const payload = await response.json();
+            updateServerButton(payload);
+        } catch (error) {
+            updateServerButton({
+                connected: false,
+                message: 'Unable to read server status.',
+            });
+        }
+    }
+
+    async function waitForServerConnection(attempts = 8) {
+        for (let index = 0; index < attempts; index++) {
+            await new Promise(resolve => setTimeout(resolve, 700));
+
+            try {
+                const response = await fetch(serverControl.statusUrl, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const payload = await response.json();
+                updateServerButton(payload);
+
+                if (payload.connected) {
+                    return true;
+                }
+            } catch (error) {
+                // Keep polling briefly; the server may still be starting.
+            }
+        }
+
+        return false;
+    }
+
+    async function toggleServerConnection() {
+        const requestedConnect = !serverControl.connected;
+        serverControl.busy = true;
+        updateServerButton({ connected: serverControl.connected });
+        let shouldRefresh = false;
+        let latestPayload = { connected: serverControl.connected };
+
+        try {
+            const response = await fetch(serverControl.connected ? serverControl.disconnectUrl : serverControl.connectUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': serverControl.csrf,
+                },
+            });
+
+            const payload = await response.json();
+            latestPayload = payload;
+            updateServerButton(payload);
+            shouldRefresh = response.ok;
+        } catch (error) {
+            latestPayload = {
+                connected: serverControl.connected,
+                message: 'Unable to change server connection. Please check the system console.',
+            };
+            updateServerButton(latestPayload);
+        } finally {
+            serverControl.busy = false;
+            if (requestedConnect && !latestPayload.connected) {
+                const connected = await waitForServerConnection();
+
+                if (! connected) {
+                    updateServerButton(latestPayload);
+                }
+            } else if (shouldRefresh) {
+                if (latestPayload.connected) {
+                    updateServerButton(latestPayload);
+                } else {
+                    refreshServerStatus();
+                }
+            } else {
+                updateServerButton(latestPayload);
+            }
+        }
+    }
+    @endif
 
     function toggleDarkMode() {
         document.documentElement.classList.toggle('dark');
@@ -350,6 +464,10 @@
         };
         updateCount();
     });
+
+    @if($showServerControl ?? false)
+    refreshServerStatus();
+    @endif
 </script>
 
 </body>
