@@ -397,16 +397,19 @@
 
         <!-- PAGE CONTENT -->
         <main class="flex-1 p-6">
-            @if(session('success'))
+            @if(session('success') || session('warning'))
             <div id="toast"
-                class="fixed top-5 right-5 bg-accent text-white px-6 py-3 rounded-xl shadow-lg">
-                {{ session('success') }}
+                class="fixed top-5 right-5 {{ session('warning') ? 'bg-yellow-500' : 'bg-accent' }} text-white px-6 py-3 rounded-xl shadow-lg max-w-md">
+                {{ session('success') ?? session('warning') }}
             </div>
 
             <script>
                 setTimeout(() => {
-                    document.getElementById("toast").remove();
-                }, 3000);
+                    const toast = document.getElementById("toast");
+                    if (toast) {
+                        toast.remove();
+                    }
+                }, 4000);
             </script>
             @endif
 

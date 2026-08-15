@@ -188,9 +188,10 @@
 
             <div class="signature">
                 <div class="line">
-                    {{ optional($result->completed_at)->format('d M Y h:i A') }} <br>
+                    
                     {{ optional($result->reporter)->name ?? 'N/A' }}<br>
-                    {{optional($result->reporter)->designation ?? 'N/A'}}
+                    {{optional($result->reporter)->designation ?? 'N/A'}}<br>
+                    {{ optional($result->completed_at)->format('d M Y h:i A') }} 
                 </div>
             </div>
         </div>

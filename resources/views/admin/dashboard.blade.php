@@ -37,7 +37,7 @@
 </div>
 
 <!-- Quick Actions -->
-<div class="grid md:grid-cols-3 gap-6">
+<div class="grid md:grid-cols-4 gap-6">
 
     <a href="{{ route('admin.categories.index') }}"
        class="bg-primary text-white p-6 rounded-xl shadow hover:bg-secondary transition">
@@ -62,6 +62,16 @@
             Manage Users Information.
         </p>
     </a>
+
+    <form method="POST" action="{{ route('admin.database.backup') }}" class="bg-red-600 text-white p-6 rounded-xl shadow hover:bg-red-500 transition">
+        @csrf
+        <button type="submit" class="w-full text-left">
+            <h3 class="font-bold text-lg">Backup Database</h3>
+            <p class="text-sm mt-2 text-red-100">
+                Save the database to the detected external drive or Downloads folder.
+            </p>
+        </button>
+    </form>
 
 </div>
 

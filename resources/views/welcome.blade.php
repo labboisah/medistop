@@ -108,7 +108,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01M4.93 12.93a10 10 0 0114.14 0M1.394 9.393a15 15 0 0121.212 0" />
                     </svg>
-                    <span id="serverControlLabel">Connect</span>
+                    <span id="serverControlLabel">Connect Others</span>
                 </button>
             </div>
             @endif
@@ -322,7 +322,7 @@
         button.disabled = serverControl.busy;
         label.textContent = serverControl.busy
             ? 'Please wait...'
-            : (serverControl.connected ? 'Disconnect' : 'Connect');
+            : (serverControl.connected ? 'Disconnect Others' : 'Connect Others');
 
         if (serverControl.connected && payload.url) {
             url.href = payload.url;

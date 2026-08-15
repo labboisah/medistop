@@ -13,6 +13,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\StaffResultController;
 use App\Http\Controllers\AdminStaffReportController;
+use App\Http\Controllers\DatabaseBackupController;
 use App\Http\Controllers\LocalServerController;
 use Illuminate\Support\Facades\Route;
 
@@ -68,6 +69,7 @@ Route::middleware(['auth', 'admin'])
     Route::get('staff-reports/download', [AdminStaffReportController::class, 'download'])->name('staff-reports.download');
     Route::get('staff-performance', [AdminStaffReportController::class, 'performance'])->name('staff-performance.index');
     Route::get('staff-performance/download', [AdminStaffReportController::class, 'downloadPerformance'])->name('staff-performance.download');
+    Route::post('database/backup', [DatabaseBackupController::class, 'backup'])->name('database.backup');
 
     Route::prefix('reports')
         ->name('reports.')
