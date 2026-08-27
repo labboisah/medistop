@@ -122,7 +122,7 @@ class ReportController extends Controller
         }
 
         $totalExpense = $expenses->sum('amount');
-        $salaryAmount = $this->salaryAmountForRange($from, $to, $this->isAdmin() && ! $selectedUserId);
+        $salaryAmount = $this->salaryAmountForRange($from, $to, $this->isAdmin(), $selectedUserId);
         $totalOutflow = $totalExpense + $salaryAmount + $refundsTotal;
         $profit = $annexShare - $totalOutflow;
 
@@ -184,6 +184,35 @@ class ReportController extends Controller
                     ];
                 }
                 $userAggregated[$uid]['expenses'] += $expense->amount;
+            }
+
+            $salaryPayments = SalaryPayment::with('user')
+                ->whereBetween('salary_month', [
+                    Carbon::parse($from)->startOfMonth(),
+                    Carbon::parse($to)->startOfMonth(),
+                ])
+                ->when($selectedUserId, fn ($query) => $query->where('user_id', $selectedUserId))
+                ->get();
+
+            foreach ($salaryPayments as $salaryPayment) {
+                $uid = $salaryPayment->user_id;
+                if (!isset($userAggregated[$uid])) {
+                    $userAggregated[$uid] = [
+                        'user_id' => $uid,
+                        'user_name' => optional($salaryPayment->user)->name ?? 'Unknown',
+                        'gross' => 0,
+                        'discount' => 0,
+                        'net' => 0,
+                        'staff_share' => 0,
+                        'annex_share' => 0,
+                        'radiologist_share' => 0,
+                        'radiographer_share' => 0,
+                        'expenses' => 0,
+                        'salary_amount' => 0,
+                        'profit' => 0,
+                    ];
+                }
+                $userAggregated[$uid]['salary_amount'] += $salaryPayment->amount;
             }
 
             foreach ($userAggregated as &$entry) {
@@ -415,7 +444,7 @@ class ReportController extends Controller
         return $pdf->download($reportId.'.pdf');
     }
 
-    private function salaryAmountForRange($from, $to, bool $includeSalary): float
+    private function salaryAmountForRange($from, $to, bool $includeSalary, ?string $userId = null): float
     {
         if (! $includeSalary || ! $from || ! $to) {
             return 0;
@@ -425,6 +454,7 @@ class ReportController extends Controller
         $toMonth = Carbon::parse($to)->startOfMonth()->toDateString();
 
         return (float) SalaryPayment::whereBetween('salary_month', [$fromMonth, $toMonth])
+            ->when($userId, fn ($query) => $query->where('user_id', $userId))
             ->sum('amount');
     }
 }

@@ -98,6 +98,16 @@
             </div>
 
             <div>
+                <label class="block text-sm font-medium mb-2">Collected From</label>
+                <select name="user_id" class="w-full px-4 py-3 border rounded-xl">
+                    @foreach($users as $user)
+                        <option value="{{ $user->id }}" {{ (string) old('user_id', $selectedUserId) === (string) $user->id ? 'selected' : '' }}>{{ $user->name }}</option>
+                    @endforeach
+                </select>
+                @error('user_id')<p class="text-red-600 text-sm mt-2">{{ $message }}</p>@enderror
+            </div>
+
+            <div>
                 <label class="block text-sm font-medium mb-2">Total Amount Paid</label>
                 <input type="number" step="0.01" name="amount"
                        value="{{ old('amount', $salaryPayment?->amount ?? 0) }}"
@@ -125,7 +135,7 @@
                 <tr>
                     <th class="py-3 px-4 text-left">Month</th>
                     <th class="py-3 px-4 text-left">Amount</th>
-                    <th class="py-3 px-4 text-left">Recorded By</th>
+                    <th class="py-3 px-4 text-left">Collected From</th>
                     <th class="py-3 px-4 text-left">Note</th>
                 </tr>
             </thead>

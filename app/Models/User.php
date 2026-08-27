@@ -132,8 +132,7 @@ class User extends Authenticatable
         $todayExpenses = \App\Models\Expense::whereDate('expense_date', today())
                             ->sum('amount');
 
-        $todayRefunds = \App\Models\BillRefund::whereDate('created_at', today())
-                            ->sum('amount');
+        $todayRefunds = 0;
 
         $todayProfit = $todayNetRevenue - ($todayExpenses + $todayRadiologistShare + $todayRadiographerShare + $todayStaffShare + $todayRefunds);
 
@@ -165,8 +164,7 @@ class User extends Authenticatable
         $monthExpenses = \App\Models\Expense::whereMonth('expense_date', now()->month)
                             ->sum('amount');
 
-        $monthRefunds = \App\Models\BillRefund::whereMonth('created_at', now()->month)
-                            ->sum('amount');
+        $monthRefunds = 0;
 
         $monthSalaryPaid = SalaryPayment::whereYear('salary_month', now()->year)
             ->whereMonth('salary_month', now()->month)

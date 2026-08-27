@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Bill;
 use App\Models\BillResult;
+use App\Models\Expense;
 use App\Models\Payment;
+use App\Models\SalaryPayment;
 use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -103,6 +105,10 @@ class AdminStaffReportController extends Controller
             'totalDiscount' => $audit['totalDiscount'],
             'totalNet' => $audit['totalNet'],
             'totalPayments' => $audit['totalPayments'],
+            'totalExpenses' => $audit['totalExpenses'],
+            'totalExpenditure' => $audit['totalExpenditure'],
+            'totalProfit' => $audit['totalProfit'],
+            'totalSalary' => $audit['totalSalary'],
         ]);
     }
 
@@ -123,7 +129,7 @@ class AdminStaffReportController extends Controller
             fputcsv($file, ['Staff Performance Audit']);
             fputcsv($file, ['From', $from, 'To', $to]);
             fputcsv($file, []);
-            fputcsv($file, ['Date', 'User', 'Bills', 'Gross', 'Discount', 'Net Revenue', 'Payments Collected']);
+            fputcsv($file, ['Date', 'User', 'Bills', 'Gross', 'Discount', 'Net Revenue', 'Payments Collected', 'Expenses', 'Profit', 'Salary Paid', 'Net After Salary']);
 
             foreach ($audit['rows'] as $row) {
                 fputcsv($file, [
@@ -134,6 +140,10 @@ class AdminStaffReportController extends Controller
                     $row['discount'],
                     $row['net'],
                     $row['payments'],
+                    $row['expenses'],
+                    $row['profit'],
+                    $row['salary_amount'] ?? 0,
+                    $row['net_after_salary'] ?? $row['net'],
                 ]);
             }
 
@@ -321,7 +331,17 @@ class AdminStaffReportController extends Controller
             ->groupBy('report_date', 'user_id')
             ->get();
 
-        $users = User::whereIn('id', $bills->pluck('user_id')->merge($payments->pluck('user_id'))->unique())
+        $expenses = Expense::with('user')
+            ->selectRaw('DATE(expense_date) as report_date, user_id, SUM(amount) as expenses')
+            ->whereBetween('expense_date', [$from, $to])
+            ->when($userId, fn ($query) => $query->where('user_id', $userId))
+            ->groupBy('report_date', 'user_id')
+            ->get();
+
+        $users = User::whereIn('id', $bills->pluck('user_id')
+            ->merge($payments->pluck('user_id'))
+            ->merge($expenses->pluck('user_id'))
+            ->unique())
             ->get()
             ->keyBy('id');
 
@@ -335,6 +355,7 @@ class AdminStaffReportController extends Controller
 
         $billMap = $bills->keyBy(fn ($bill) => $bill->report_date.'-'.$bill->user_id);
         $paymentMap = $payments->keyBy(fn ($payment) => $payment->report_date.'-'.$payment->user_id);
+        $expenseMap = $expenses->keyBy(fn ($expense) => $expense->report_date.'-'.$expense->user_id);
         $activeUserIds = $userId ? collect([(int) $userId]) : $users->keys();
         $rows = collect();
 
@@ -345,8 +366,9 @@ class AdminStaffReportController extends Controller
                 $key = $dateString.'-'.$activeUserId;
                 $bill = $billMap->get($key);
                 $payment = $paymentMap->get($key);
+                $expense = $expenseMap->get($key);
 
-                if (! $bill && ! $payment) {
+                if (! $bill && ! $payment && ! $expense) {
                     continue;
                 }
 
@@ -360,6 +382,8 @@ class AdminStaffReportController extends Controller
                     'discount' => (float) ($bill->discount ?? 0),
                     'net' => (float) ($bill->net ?? 0),
                     'payments' => (float) ($payment->payments ?? 0),
+                    'expenses' => (float) ($expense->expenses ?? 0),
+                    'profit' => (float) ($bill->net ?? 0) - (float) ($expense->expenses ?? 0),
                 ]);
             }
         }
@@ -385,16 +409,52 @@ class AdminStaffReportController extends Controller
                 $first = $userRows->first();
 
                 return [
+                    'user_id' => $first['user_id'],
                     'user_name' => $first['user_name'],
                     'bill_count' => $userRows->sum('bill_count'),
                     'gross' => $userRows->sum('gross'),
                     'discount' => $userRows->sum('discount'),
                     'net' => $userRows->sum('net'),
                     'payments' => $userRows->sum('payments'),
+                    'expenses' => $userRows->sum('expenses'),
+                    'profit' => $userRows->sum('profit'),
                 ];
             })
             ->sortBy('user_name')
             ->values();
+
+        $salaryByUser = SalaryPayment::whereBetween('salary_month', [
+            Carbon::parse($from)->startOfMonth(),
+            Carbon::parse($to)->startOfMonth(),
+        ])
+            ->when($userId, fn ($query) => $query->where('user_id', $userId))
+            ->get()
+            ->groupBy('user_id')
+            ->map(fn ($payments) => (float) $payments->sum('amount'));
+
+        $userSummary = $userSummary->keyBy('user_id');
+        foreach ($salaryByUser as $salaryUserId => $salaryAmount) {
+            if (!$userSummary->has($salaryUserId)) {
+                $userSummary->put($salaryUserId, [
+                    'user_id' => $salaryUserId,
+                    'user_name' => optional(User::find($salaryUserId))->name ?? 'Unknown',
+                    'bill_count' => 0,
+                    'gross' => 0,
+                    'discount' => 0,
+                    'net' => 0,
+                    'payments' => 0,
+                    'expenses' => 0,
+                    'profit' => 0,
+                ]);
+            }
+            $summary = $userSummary->get($salaryUserId);
+                $summary['salary_amount'] = $salaryAmount;
+                $summary['total_expenditure'] = $summary['expenses'] + $salaryAmount;
+            $summary['net_after_salary'] = $summary['net'] - $summary['total_expenditure'];
+                $summary['profit'] = $summary['net'] - $summary['total_expenditure'];
+            $userSummary->put($salaryUserId, $summary);
+        }
+        $userSummary = $userSummary->sortBy('user_name')->values();
 
         return [
             'rows' => $rows->sortByDesc('date')->values(),
@@ -407,6 +467,10 @@ class AdminStaffReportController extends Controller
             'totalDiscount' => $rows->sum('discount'),
             'totalNet' => $rows->sum('net'),
             'totalPayments' => $rows->sum('payments'),
+            'totalExpenses' => $rows->sum('expenses'),
+                'totalExpenditure' => $rows->sum('expenses') + $salaryByUser->sum(),
+            'totalProfit' => $userSummary->sum('profit'),
+            'totalSalary' => $salaryByUser->sum(),
         ];
     }
 }
