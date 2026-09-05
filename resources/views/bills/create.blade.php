@@ -24,12 +24,36 @@
     </select>
 </div>
 <div class="mb-6">
-    <label class="block text-sm mb-2 font-medium">Age</label>
-    <input type="number" name="age"
-           class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
+    <div class="flex items-center justify-between gap-4 mb-2">
+        <label class="block text-sm font-medium">Age</label>
+        <label class="inline-flex items-center gap-2 text-sm text-gray-600">
+            <input type="checkbox" name="less_than_year" id="lessThanYear" value="1"
+                   {{ old('less_than_year') ? 'checked' : '' }}
+                   class="rounded border-gray-300 text-accent focus:ring-accent">
+            Less than a year
+        </label>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-4">
+        <div id="ageYearsWrap">
+            <label class="block text-xs text-gray-500 mb-1">Years</label>
+            <input type="number" name="age_years" id="ageYears" min="0" max="150"
+                   value="{{ old('age_years') }}"
+                   class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
+            @error('age_years')<p class="text-red-600 text-sm mt-2">{{ $message }}</p>@enderror
+        </div>
+
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">Months</label>
+            <input type="number" name="age_months" id="ageMonths" min="0" max="11"
+                   value="{{ old('age_months') }}"
+                   class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
+            @error('age_months')<p class="text-red-600 text-sm mt-2">{{ $message }}</p>@enderror
+        </div>
+    </div>
 </div>  
 <div class="mb-6">
-    <label class="block text-sm mb-2 font-medium">Discount (₦)</label>
+    <label class="block text-sm mb-2 font-medium">Discount (NGN)</label>
     <input type="number" step="0.01" name="discount"
            class="w-full px-4 py-3 border rounded-xl">
 </div>
@@ -89,7 +113,7 @@
                     Total:
                 </td>
                 <td class="px-4 font-bold text-primary" id="totalAmount">
-                    ₦0.00
+                    NGN 0.00
                 </td>
                 <td></td>
             </tr>
@@ -113,6 +137,33 @@
 
 let selectedServices = [];
 let total = 0;
+
+const lessThanYear = document.getElementById('lessThanYear');
+const ageYears = document.getElementById('ageYears');
+const ageYearsWrap = document.getElementById('ageYearsWrap');
+const ageMonths = document.getElementById('ageMonths');
+
+function syncAgeInputs() {
+    if (!lessThanYear || !ageYears || !ageMonths || !ageYearsWrap) {
+        return;
+    }
+
+    if (lessThanYear.checked) {
+        ageYears.value = '';
+        ageYears.disabled = true;
+        ageYearsWrap.classList.add('hidden');
+        ageMonths.max = 11;
+        ageMonths.placeholder = '0 - 11 months';
+    } else {
+        ageYears.disabled = false;
+        ageYearsWrap.classList.remove('hidden');
+        ageMonths.max = 11;
+        ageMonths.placeholder = 'Optional months';
+    }
+}
+
+lessThanYear?.addEventListener('change', syncAgeInputs);
+syncAgeInputs();
 
 function addService() {
 
@@ -140,7 +191,7 @@ function addService() {
 
     row.innerHTML = `
         <td class="py-3 px-4">${serviceName}</td>
-        <td class="px-4">₦${price.toFixed(2)}</td>
+        <td class="px-4">NGN ${price.toFixed(2)}</td>
         <td class="px-4">
             <button type="button"
                 class="text-red-600"
@@ -169,7 +220,7 @@ function removeService(id, price, button) {
 }
 
 function updateTotal() {
-    document.getElementById('totalAmount').innerText = "₦" + total.toFixed(2);
+    document.getElementById('totalAmount').innerText = "NGN " + total.toFixed(2);
 }
 
 </script>

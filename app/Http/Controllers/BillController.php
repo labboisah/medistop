@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use App\Models\Service;
 use App\Models\BillItem;
 use App\Models\Bill;
@@ -37,7 +38,9 @@ class BillController extends Controller
         $request->validate([
             'patient_name' => 'nullable|string',
             'gender' => 'nullable|in:male,female',
-            'age' => 'nullable|integer',
+            'less_than_year' => 'nullable|boolean',
+            'age_years' => 'nullable|integer|min:0|max:150',
+            'age_months' => 'nullable|integer|min:0|max:11',
             'services' => 'required|array',
             'services.*' => 'exists:services,id',
         ]);
@@ -53,7 +56,7 @@ class BillController extends Controller
             'patient_name' => $request->patient_name,
             'user_id' => auth()->id(),
             'gender' => $request->gender,
-            'age' => $request->age,
+            'age' => $this->formatPatientAge($request),
         ]);
 
         foreach ($request->services as $serviceId) {
@@ -139,6 +142,23 @@ class BillController extends Controller
         return redirect()
             ->route('bills.index')
             ->with('success', 'Bill deleted successfully.');
+    }
+
+    private function formatPatientAge(Request $request): ?string
+    {
+        $years = $request->boolean('less_than_year') ? 0 : (int) ($request->age_years ?? 0);
+        $months = (int) ($request->age_months ?? 0);
+        $parts = [];
+
+        if ($years > 0) {
+            $parts[] = $years.' '.Str::plural('year', $years);
+        }
+
+        if ($months > 0) {
+            $parts[] = $months.' '.Str::plural('month', $months);
+        }
+
+        return $parts ? implode(' ', $parts) : null;
     }
 
     private function generateBillNo(): string

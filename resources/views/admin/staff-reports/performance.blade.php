@@ -52,50 +52,50 @@
     </form>
 </div>
 
-<div class="grid md:grid-cols-6 gap-6 mb-6">
-    <div class="bg-white p-6 rounded-xl shadow">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+    <div class="bg-white p-4 rounded-xl shadow">
         <p class="text-sm text-gray-500">Bills</p>
-        <p class="text-2xl font-bold text-primary mt-2">{{ $totalBills }}</p>
+        <p class="text-base xl:text-lg font-bold text-primary mt-2">{{ $totalBills }}</p>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow">
+    <div class="bg-white p-4 rounded-xl shadow">
         <p class="text-sm text-gray-500">Gross</p>
-        <p class="text-2xl font-bold text-secondary mt-2">NGN {{ number_format($totalGross, 2) }}</p>
+        <p class="text-base xl:text-lg font-bold text-secondary mt-2">NGN {{ number_format($totalGross, 2) }}</p>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow">
+    <div class="bg-white p-4 rounded-xl shadow">
         <p class="text-sm text-gray-500">Discount</p>
-        <p class="text-2xl font-bold text-orange-600 mt-2">NGN {{ number_format($totalDiscount, 2) }}</p>
+        <p class="text-base xl:text-lg font-bold text-orange-600 mt-2">NGN {{ number_format($totalDiscount, 2) }}</p>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow">
+    <div class="bg-white p-4 rounded-xl shadow">
         <p class="text-sm text-gray-500">Net Revenue</p>
-        <p class="text-2xl font-bold text-accent mt-2">NGN {{ number_format($totalNet, 2) }}</p>
+        <p class="text-base xl:text-lg font-bold text-accent mt-2">NGN {{ number_format($totalNet, 2) }}</p>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow">
+    <div class="bg-white p-4 rounded-xl shadow">
         <p class="text-sm text-gray-500">Payments</p>
-        <p class="text-2xl font-bold text-indigo-600 mt-2">NGN {{ number_format($totalPayments, 2) }}</p>
+        <p class="text-base xl:text-lg font-bold text-indigo-600 mt-2">NGN {{ number_format($totalPayments, 2) }}</p>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow">
+    <div class="bg-white p-4 rounded-xl shadow">
         <p class="text-sm text-gray-500">Salary Paid</p>
-        <p class="text-2xl font-bold text-yellow-600 mt-2">NGN {{ number_format($totalSalary, 2) }}</p>
+        <p class="text-base xl:text-lg font-bold text-yellow-600 mt-2">NGN {{ number_format($totalSalary, 2) }}</p>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow">
+    <div class="bg-white p-4 rounded-xl shadow">
         <p class="text-sm text-gray-500">Expenses</p>
-        <p class="text-2xl font-bold text-red-600 mt-2">NGN {{ number_format($totalExpenses, 2) }}</p>
+        <p class="text-base xl:text-lg font-bold text-red-600 mt-2">NGN {{ number_format($totalExpenses, 2) }}</p>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow">
+    <div class="bg-white p-4 rounded-xl shadow">
         <p class="text-sm text-gray-500">Total Expenditure</p>
-        <p class="text-2xl font-bold text-red-700 mt-2">NGN {{ number_format($totalExpenditure, 2) }}</p>
+        <p class="text-base xl:text-lg font-bold text-red-700 mt-2">NGN {{ number_format($totalExpenditure, 2) }}</p>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow">
-        <p class="text-sm text-gray-500">Profit After Salary</p>
-        <p class="text-2xl font-bold text-green-600 mt-2">NGN {{ number_format($totalProfit, 2) }}</p>
+    <div class="bg-white p-4 rounded-xl shadow">
+        <p class="text-sm text-gray-500">Profit After Expenditure</p>
+        <p class="text-base xl:text-lg font-bold text-green-600 mt-2">NGN {{ number_format($totalProfit, 2) }}</p>
     </div>
 </div>
 
@@ -122,10 +122,12 @@
                 <th class="py-3 px-4 text-right">Discount</th>
                 <th class="py-3 px-4 text-right">Net Revenue</th>
                 <th class="py-3 px-4 text-right">Payments</th>
+                <th class="py-3 px-4 text-right">Radiologist Share</th>
+                <th class="py-3 px-4 text-right">Radiographer Share</th>
                 <th class="py-3 px-4 text-right">Salary</th>
-                <th class="py-3 px-4 text-right">After Salary</th>
+                <th class="py-3 px-4 text-right">After Expenditure</th>
                 <th class="py-3 px-4 text-right">Expenses</th>
-                    <th class="py-3 px-4 text-right">Total Expenditure</th>
+                <th class="py-3 px-4 text-right">Total Expenditure</th>
                 <th class="py-3 px-4 text-right">Profit</th>
             </tr>
         </thead>
@@ -138,15 +140,17 @@
                     <td class="py-3 px-4 text-right">NGN {{ number_format($row['discount'], 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-accent">NGN {{ number_format($row['net'], 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-indigo-600">NGN {{ number_format($row['payments'], 2) }}</td>
+                    <td class="py-3 px-4 text-right text-purple-600">NGN {{ number_format($row['radiologist_share'] ?? 0, 2) }}</td>
+                    <td class="py-3 px-4 text-right text-sky-600">NGN {{ number_format($row['radiographer_share'] ?? 0, 2) }}</td>
                     <td class="py-3 px-4 text-right text-yellow-600">NGN {{ number_format($row['salary_amount'] ?? 0, 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold">NGN {{ number_format($row['net_after_salary'] ?? $row['net'], 2) }}</td>
                     <td class="py-3 px-4 text-right text-red-600">NGN {{ number_format($row['expenses'], 2) }}</td>
-                        <td class="py-3 px-4 text-right text-red-700">NGN {{ number_format($row['total_expenditure'] ?? $row['expenses'], 2) }}</td>
+                    <td class="py-3 px-4 text-right text-red-700">NGN {{ number_format($row['total_expenditure'] ?? $row['expenses'], 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-green-600">NGN {{ number_format($row['profit'], 2) }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="11" class="py-6 text-center text-gray-500">No user activity found for this duration.</td>
+                    <td colspan="13" class="py-6 text-center text-gray-500">No user activity found for this duration.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -166,7 +170,10 @@
                 <th class="py-3 px-4 text-right">Discount</th>
                 <th class="py-3 px-4 text-right">Net Revenue</th>
                 <th class="py-3 px-4 text-right">Payments</th>
+                <th class="py-3 px-4 text-right">Radiologist Share</th>
+                <th class="py-3 px-4 text-right">Radiographer Share</th>
                 <th class="py-3 px-4 text-right">Expenses</th>
+                <th class="py-3 px-4 text-right">Total Expenditure</th>
                 <th class="py-3 px-4 text-right">Profit</th>
             </tr>
         </thead>
@@ -180,12 +187,15 @@
                     <td class="py-3 px-4 text-right">NGN {{ number_format($row['discount'], 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-accent">NGN {{ number_format($row['net'], 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-indigo-600">NGN {{ number_format($row['payments'], 2) }}</td>
+                    <td class="py-3 px-4 text-right text-purple-600">NGN {{ number_format($row['radiologist_share'] ?? 0, 2) }}</td>
+                    <td class="py-3 px-4 text-right text-sky-600">NGN {{ number_format($row['radiographer_share'] ?? 0, 2) }}</td>
                     <td class="py-3 px-4 text-right text-red-600">NGN {{ number_format($row['expenses'], 2) }}</td>
+                    <td class="py-3 px-4 text-right text-red-700">NGN {{ number_format($row['total_expenditure'] ?? $row['expenses'], 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-green-600">NGN {{ number_format($row['profit'], 2) }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9" class="py-6 text-center text-gray-500">No daily income found for this filter.</td>
+                    <td colspan="12" class="py-6 text-center text-gray-500">No daily income found for this filter.</td>
                 </tr>
             @endforelse
         </tbody>

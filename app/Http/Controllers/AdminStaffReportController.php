@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bill;
+use App\Models\BillItem;
 use App\Models\BillResult;
 use App\Models\Expense;
 use App\Models\Payment;
@@ -129,7 +130,7 @@ class AdminStaffReportController extends Controller
             fputcsv($file, ['Staff Performance Audit']);
             fputcsv($file, ['From', $from, 'To', $to]);
             fputcsv($file, []);
-            fputcsv($file, ['Date', 'User', 'Bills', 'Gross', 'Discount', 'Net Revenue', 'Payments Collected', 'Expenses', 'Profit', 'Salary Paid', 'Net After Salary']);
+            fputcsv($file, ['Date', 'User', 'Bills', 'Gross', 'Discount', 'Net Revenue', 'Payments Collected', 'Radiologist Share', 'Radiographer Share', 'Expenses', 'Total Expenditure', 'Profit']);
 
             foreach ($audit['rows'] as $row) {
                 fputcsv($file, [
@@ -140,10 +141,11 @@ class AdminStaffReportController extends Controller
                     $row['discount'],
                     $row['net'],
                     $row['payments'],
+                    $row['radiologist_share'],
+                    $row['radiographer_share'],
                     $row['expenses'],
+                    $row['total_expenditure'],
                     $row['profit'],
-                    $row['salary_amount'] ?? 0,
-                    $row['net_after_salary'] ?? $row['net'],
                 ]);
             }
 
@@ -338,9 +340,22 @@ class AdminStaffReportController extends Controller
             ->groupBy('report_date', 'user_id')
             ->get();
 
+        $shares = BillItem::query()
+            ->join('bills', 'bill_items.bill_id', '=', 'bills.id')
+            ->leftJoin('revenue_distributions', 'bill_items.id', '=', 'revenue_distributions.bill_item_id')
+            ->selectRaw('DATE(bills.created_at) as report_date, bills.user_id, SUM(COALESCE(revenue_distributions.radiologist_amount, 0)) as radiologist_share, SUM(COALESCE(revenue_distributions.radiographer_amount, 0)) as radiographer_share')
+            ->whereBetween('bills.created_at', [
+                Carbon::parse($from)->startOfDay(),
+                Carbon::parse($to)->endOfDay(),
+            ])
+            ->when($userId, fn ($query) => $query->where('bills.user_id', $userId))
+            ->groupBy('report_date', 'bills.user_id')
+            ->get();
+
         $users = User::whereIn('id', $bills->pluck('user_id')
             ->merge($payments->pluck('user_id'))
             ->merge($expenses->pluck('user_id'))
+            ->merge($shares->pluck('user_id'))
             ->unique())
             ->get()
             ->keyBy('id');
@@ -356,6 +371,7 @@ class AdminStaffReportController extends Controller
         $billMap = $bills->keyBy(fn ($bill) => $bill->report_date.'-'.$bill->user_id);
         $paymentMap = $payments->keyBy(fn ($payment) => $payment->report_date.'-'.$payment->user_id);
         $expenseMap = $expenses->keyBy(fn ($expense) => $expense->report_date.'-'.$expense->user_id);
+        $shareMap = $shares->keyBy(fn ($share) => $share->report_date.'-'.$share->user_id);
         $activeUserIds = $userId ? collect([(int) $userId]) : $users->keys();
         $rows = collect();
 
@@ -367,10 +383,17 @@ class AdminStaffReportController extends Controller
                 $bill = $billMap->get($key);
                 $payment = $paymentMap->get($key);
                 $expense = $expenseMap->get($key);
+                $share = $shareMap->get($key);
 
-                if (! $bill && ! $payment && ! $expense) {
+                if (! $bill && ! $payment && ! $expense && ! $share) {
                     continue;
                 }
+
+                $radiologistShare = (float) ($share->radiologist_share ?? 0);
+                $radiographerShare = (float) ($share->radiographer_share ?? 0);
+                $expensesAmount = (float) ($expense->expenses ?? 0);
+                $totalExpenditure = $expensesAmount + $radiologistShare + $radiographerShare;
+                $net = (float) ($bill->net ?? 0);
 
                 $rows->push([
                     'date' => $dateString,
@@ -380,10 +403,13 @@ class AdminStaffReportController extends Controller
                     'bill_count' => (int) ($bill->bill_count ?? 0),
                     'gross' => (float) ($bill->gross ?? 0),
                     'discount' => (float) ($bill->discount ?? 0),
-                    'net' => (float) ($bill->net ?? 0),
+                    'net' => $net,
                     'payments' => (float) ($payment->payments ?? 0),
-                    'expenses' => (float) ($expense->expenses ?? 0),
-                    'profit' => (float) ($bill->net ?? 0) - (float) ($expense->expenses ?? 0),
+                    'radiologist_share' => $radiologistShare,
+                    'radiographer_share' => $radiographerShare,
+                    'expenses' => $expensesAmount,
+                    'total_expenditure' => $totalExpenditure,
+                    'profit' => $net - $totalExpenditure,
                 ]);
             }
         }
@@ -416,8 +442,13 @@ class AdminStaffReportController extends Controller
                     'discount' => $userRows->sum('discount'),
                     'net' => $userRows->sum('net'),
                     'payments' => $userRows->sum('payments'),
+                    'radiologist_share' => $userRows->sum('radiologist_share'),
+                    'radiographer_share' => $userRows->sum('radiographer_share'),
                     'expenses' => $userRows->sum('expenses'),
-                    'profit' => $userRows->sum('profit'),
+                    'salary_amount' => 0,
+                    'total_expenditure' => $userRows->sum('total_expenditure'),
+                    'net_after_salary' => $userRows->sum('net') - $userRows->sum('total_expenditure'),
+                    'profit' => $userRows->sum('net') - $userRows->sum('total_expenditure'),
                 ];
             })
             ->sortBy('user_name')
@@ -443,15 +474,23 @@ class AdminStaffReportController extends Controller
                     'discount' => 0,
                     'net' => 0,
                     'payments' => 0,
+                    'radiologist_share' => 0,
+                    'radiographer_share' => 0,
                     'expenses' => 0,
+                    'salary_amount' => 0,
+                    'total_expenditure' => 0,
+                    'net_after_salary' => 0,
                     'profit' => 0,
                 ]);
             }
             $summary = $userSummary->get($salaryUserId);
-                $summary['salary_amount'] = $salaryAmount;
-                $summary['total_expenditure'] = $summary['expenses'] + $salaryAmount;
+            $summary['salary_amount'] = $salaryAmount;
+            $summary['total_expenditure'] = $summary['expenses']
+                + $summary['radiologist_share']
+                + $summary['radiographer_share']
+                + $salaryAmount;
             $summary['net_after_salary'] = $summary['net'] - $summary['total_expenditure'];
-                $summary['profit'] = $summary['net'] - $summary['total_expenditure'];
+            $summary['profit'] = $summary['net'] - $summary['total_expenditure'];
             $userSummary->put($salaryUserId, $summary);
         }
         $userSummary = $userSummary->sortBy('user_name')->values();
@@ -468,7 +507,7 @@ class AdminStaffReportController extends Controller
             'totalNet' => $rows->sum('net'),
             'totalPayments' => $rows->sum('payments'),
             'totalExpenses' => $rows->sum('expenses'),
-                'totalExpenditure' => $rows->sum('expenses') + $salaryByUser->sum(),
+            'totalExpenditure' => $rows->sum('total_expenditure') + $salaryByUser->sum(),
             'totalProfit' => $userSummary->sum('profit'),
             'totalSalary' => $salaryByUser->sum(),
         ];
