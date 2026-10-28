@@ -26,16 +26,24 @@ class BillController extends Controller
      */
     public function create()
     {
-        $services = Service::orderBy('name')->get();
-        return view('bills.create', compact('services'));
+        return $this->createForm();
     }
 
     public function createRequest()
     {
-        $services = Service::orderBy('name')->get();
-        $requestMode = true;
+        return $this->createForm(true);
+    }
 
-        return view('bills.create', compact('services', 'requestMode'));
+    private function createForm(bool $requestMode = false)
+    {
+        $serviceOptions = Service::orderBy('name')->get()->map(fn ($service) => [
+            'id' => $service->id,
+            'name' => $service->name,
+            'price' => (float) $service->price,
+        ])->values()->all();
+        $oldServiceIds = array_map('intval', (array) old('services', []));
+
+        return view('bills.create', compact('serviceOptions', 'oldServiceIds', 'requestMode'));
     }
 
     public function showRequest(Bill $bill)
