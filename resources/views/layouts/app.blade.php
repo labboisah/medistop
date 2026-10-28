@@ -92,6 +92,14 @@
 
             @if(auth()->user()->role == 'user')
 
+            <a href="{{ route('investigation-bookings.index') }}"
+            class="flex items-center gap-3 rounded-lg px-4 py-2 transition {{ request()->routeIs('investigation-bookings.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+                <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-7 7h6m-6 4h6" />
+                </svg>
+                <span>Public Bookings</span>
+            </a>
+
             {{-- PAYMENTS --}}
             <a href="{{route('payments.index')}}"
             class="flex items-center gap-3 px-4 py-2 rounded-lg transition

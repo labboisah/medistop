@@ -44,6 +44,10 @@
         </h1>
 
         <div class="flex items-center gap-6">
+            <a href="{{ route('public.investigation-bookings.create') }}"
+                class="rounded-lg bg-primary px-5 py-2 font-semibold text-white transition hover:bg-secondary">
+                Book Investigation
+            </a>
             <!-- Dark Mode Toggle -->
             <button onclick="toggleDarkMode()" 
                 class="bg-gray-200 dark:bg-gray-700 p-2 rounded-lg">
@@ -78,6 +82,10 @@
             </p>
 
             <div class="mt-8 flex gap-4">
+                <a href="{{ route('public.investigation-bookings.create') }}"
+                    class="rounded-xl bg-accent px-8 py-4 font-bold text-white transition hover:scale-105">
+                    Book Investigation
+                </a>
                 <button onclick="openModal()" 
                     class="bg-accent px-8 py-4 rounded-xl font-bold hover:scale-105 transition">
                     Access System

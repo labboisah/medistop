@@ -15,6 +15,7 @@ use App\Http\Controllers\StaffResultController;
 use App\Http\Controllers\AdminStaffReportController;
 use App\Http\Controllers\DatabaseBackupController;
 use App\Http\Controllers\LocalServerController;
+use App\Http\Controllers\PublicInvestigationBookingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -22,6 +23,14 @@ Route::get('/', function () {
         'showServerControl' => LocalServerController::shouldShowControl(request()),
     ]);
 });
+
+Route::get('/book-investigation', [PublicInvestigationBookingController::class, 'create'])
+    ->name('public.investigation-bookings.create');
+Route::post('/book-investigation', [PublicInvestigationBookingController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('public.investigation-bookings.store');
+Route::get('/book-investigation/{reference}', [PublicInvestigationBookingController::class, 'confirmation'])
+    ->name('public.investigation-bookings.confirmation');
 
 Route::get('/server-control/status', [LocalServerController::class, 'status'])->name('server-control.status');
 Route::post('/server-control/connect', [LocalServerController::class, 'connect'])->name('server-control.connect');
@@ -57,6 +66,15 @@ Route::middleware('auth')
         Route::get('/create', [BillController::class, 'createRequest'])->name('create');
         Route::post('/', [BillController::class, 'storeRequest'])->name('store');
         Route::get('/{bill}', [BillController::class, 'showRequest'])->name('show');
+    });
+
+Route::middleware(['auth', 'user'])
+    ->prefix('investigation-bookings')
+    ->name('investigation-bookings.')
+    ->group(function () {
+        Route::get('/', [PublicInvestigationBookingController::class, 'index'])->name('index');
+        Route::get('/{booking}', [PublicInvestigationBookingController::class, 'show'])->name('show');
+        Route::post('/{booking}/accept', [PublicInvestigationBookingController::class, 'accept'])->name('accept');
     });
 
 Route::middleware(['auth', 'admin'])
