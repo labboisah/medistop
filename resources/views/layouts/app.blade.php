@@ -451,10 +451,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (sidebar && sidebarToggle && sidebarBackdrop) {
         const isDesktop = () => window.innerWidth >= 768;
-        let sidebarOpen = isDesktop();
+        let sidebarOpen = false;
 
         const updateSidebar = () => {
             if (isDesktop()) {
+                sidebar.classList.toggle('md:hidden', !sidebarOpen);
                 sidebar.classList.remove('-translate-x-full');
                 sidebarBackdrop.classList.add('hidden');
                 document.body.classList.remove('overflow-hidden');
