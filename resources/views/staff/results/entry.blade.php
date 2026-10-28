@@ -118,8 +118,8 @@
 
                         <div>
                             <label class="block text-sm font-medium mb-2">Images or DICOM files</label>
-                            <input type="file" name="images[]" multiple accept="image/*,.dcm,.dicom" class="w-full px-4 py-3 border rounded-xl">
-                            <p class="text-xs text-gray-500 mt-2">You can add more than one file. Common image formats and DICOM files are accepted (up to 200 MB per file).</p>
+                            <input type="file" name="images[]" multiple required accept="image/*,.dcm,.dicom,.zip" class="w-full px-4 py-3 border rounded-xl">
+                            <p class="text-xs text-gray-500 mt-2">Upload one or more image files, DICOM files, or DICOM ZIP archives (up to 500 MB per file).</p>
                             @foreach($errors->getMessages() as $field => $messages)
                                 @if(str_starts_with($field, 'images.'))
                                     @foreach($messages as $message)<p class="text-red-600 text-sm mt-2">{{ $message }}</p>@endforeach

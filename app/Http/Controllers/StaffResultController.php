@@ -146,10 +146,10 @@ class StaffResultController extends Controller
             'save_template' => 'nullable|boolean',
             'template_name' => 'required_if:save_template,1|nullable|string|max:255',
             'radiologist_id' => $staffType === 'radiographer' ? 'required|integer|exists:users,id' : 'nullable|integer',
-            'images' => 'nullable|array',
+            'images' => $staffType === 'radiographer' ? 'required|array|min:1' : 'nullable|array',
             'images.*' => [
                 'file',
-                'max:204800',
+                'max:512000',
                 function ($attribute, $file, $fail) {
                     if (! $file instanceof \Illuminate\Http\UploadedFile) {
                         return;
@@ -160,9 +160,11 @@ class StaffResultController extends Controller
                     $isImage = str_starts_with($mimeType, 'image/') && $mimeType !== 'image/svg+xml';
                     $isDicom = in_array($extension, ['dcm', 'dicom'], true)
                         || in_array($mimeType, ['application/dicom', 'application/dicom+json'], true);
+                    $isDicomArchive = $extension === 'zip'
+                        || in_array($mimeType, ['application/zip', 'application/x-zip-compressed'], true);
 
-                    if (! $isImage && ! $isDicom) {
-                        $fail('Upload an image or DICOM file.');
+                    if (! $isImage && ! $isDicom && ! $isDicomArchive) {
+                        $fail('Upload an image, DICOM file, or DICOM ZIP archive.');
                     }
                 },
             ],
