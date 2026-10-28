@@ -48,8 +48,15 @@
     <aside id="appSidebar" data-state="closed" class="flex w-64 shrink-0 flex-col bg-primary text-white" aria-label="Main navigation" aria-hidden="true">
 
         <!-- Logo -->
-        <div class="p-6 text-2xl font-extrabold border-b border-secondary">
-            ANNEX <span class="text-accent">SYSTEM</span>
+        <div class="flex items-center justify-between gap-3 border-b border-secondary p-4">
+            <div class="text-xl font-extrabold">
+                ANNEX <span class="text-accent">SYSTEM</span>
+            </div>
+            <button id="sidebarCollapseToggle" type="button" class="rounded-lg p-2 text-white hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-accent" aria-label="Collapse sidebar" title="Collapse sidebar">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
         </div>
 
         <!-- Navigation -->
@@ -471,6 +478,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const sidebar = document.getElementById('appSidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarCollapseToggle = document.getElementById('sidebarCollapseToggle');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 
     if (sidebar && sidebarToggle && sidebarBackdrop) {
@@ -489,9 +497,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const closeSidebar = () => {
             sidebarOpen = false;
-            if (isDesktop()) {
-                sidebar.classList.add('md:hidden');
-            }
             updateSidebar();
         };
 
@@ -501,6 +506,7 @@ document.addEventListener("DOMContentLoaded", function () {
         };
 
         sidebarToggle.addEventListener('click', toggleSidebar);
+        sidebarCollapseToggle.addEventListener('click', closeSidebar);
         sidebarBackdrop.addEventListener('click', closeSidebar);
         sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
             if (!isDesktop()) closeSidebar();
