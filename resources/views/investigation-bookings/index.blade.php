@@ -11,6 +11,49 @@
     <a href="{{ route('investigation-requests.create') }}" class="rounded-lg bg-accent px-4 py-2 font-semibold text-white">Register at center</a>
 </div>
 
+<form method="GET" action="{{ route('investigation-bookings.index') }}" class="mb-5 flex flex-wrap items-end gap-3 rounded-2xl bg-white p-5 shadow">
+    <div>
+        <label for="from" class="mb-1 block text-sm font-medium text-gray-700">From</label>
+        <input id="from" name="from" type="date" value="{{ $from }}" class="rounded-lg border-gray-300 px-3 py-2 focus:border-accent focus:ring-accent">
+    </div>
+    <div>
+        <label for="to" class="mb-1 block text-sm font-medium text-gray-700">To</label>
+        <input id="to" name="to" type="date" value="{{ $to }}" min="{{ $from }}" class="rounded-lg border-gray-300 px-3 py-2 focus:border-accent focus:ring-accent">
+    </div>
+    <button type="submit" class="rounded-lg bg-primary px-5 py-2 font-semibold text-white hover:bg-secondary">Filter</button>
+    @if($from || $to)
+        <a href="{{ route('investigation-bookings.index') }}" class="px-3 py-2 text-sm font-semibold text-gray-600 hover:text-primary">Clear dates</a>
+    @endif
+</form>
+
+<div class="mb-5 grid gap-4 sm:grid-cols-3">
+    <div class="rounded-2xl bg-white p-5 shadow">
+        <p class="text-sm text-gray-500">Total bookings</p>
+        <p class="mt-1 text-3xl font-bold text-primary">{{ number_format($stats['total']) }}</p>
+    </div>
+    <div class="rounded-2xl bg-white p-5 shadow">
+        <p class="text-sm text-gray-500">Pending</p>
+        <p class="mt-1 text-3xl font-bold text-amber-600">{{ number_format($stats['pending']) }}</p>
+    </div>
+    <div class="rounded-2xl bg-white p-5 shadow">
+        <p class="text-sm text-gray-500">Accepted</p>
+        <p class="mt-1 text-3xl font-bold text-green-700">{{ number_format($stats['accepted']) }}</p>
+    </div>
+</div>
+
+<p class="mb-3 text-sm text-gray-500">
+    Statistics
+    @if($from && $to)
+        from {{ \Carbon\Carbon::parse($from)->format('d M Y') }} through {{ \Carbon\Carbon::parse($to)->format('d M Y') }}.
+    @elseif($from)
+        from {{ \Carbon\Carbon::parse($from)->format('d M Y') }} onward.
+    @elseif($to)
+        through {{ \Carbon\Carbon::parse($to)->format('d M Y') }}.
+    @else
+        across all dates.
+    @endif
+</p>
+
 <div class="overflow-x-auto rounded-2xl bg-white p-5 shadow">
     <table class="w-full min-w-[700px] text-left text-sm">
         <thead class="border-b text-gray-500">

@@ -71,13 +71,44 @@ class PublicInvestigationBookingController extends Controller
         return view('public-bookings.confirmation', compact('booking'));
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $bookings = InvestigationBooking::with('items.service', 'acceptedBy')
-            ->latest()
-            ->paginate(20);
+        $filters = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+        ]);
 
-        return view('investigation-bookings.index', compact('bookings'));
+        $from = $filters['from'] ?? null;
+        $to = $filters['to'] ?? null;
+        if ($from && $to && $to < $from) {
+            return back()->withErrors(['to' => 'The To date must be on or after the From date.'])->withInput();
+        }
+
+        $applyDateFilters = static function ($query) use ($from, $to) {
+            if ($from) {
+                $query->whereDate('created_at', '>=', $from);
+            }
+            if ($to) {
+                $query->whereDate('created_at', '<=', $to);
+            }
+
+            return $query;
+        };
+
+        $bookings = $applyDateFilters(InvestigationBooking::query())
+            ->with('items.service', 'acceptedBy')
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        $statsQuery = $applyDateFilters(InvestigationBooking::query());
+        $stats = [
+            'total' => (clone $statsQuery)->count(),
+            'pending' => (clone $statsQuery)->where('status', 'pending')->count(),
+            'accepted' => (clone $statsQuery)->where('status', 'accepted')->count(),
+        ];
+
+        return view('investigation-bookings.index', compact('bookings', 'stats', 'from', 'to'));
     }
 
     public function show(InvestigationBooking $booking)
