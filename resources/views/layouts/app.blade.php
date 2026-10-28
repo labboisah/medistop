@@ -5,6 +5,7 @@
     <title>@yield('title', 'Annex System')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -20,7 +21,7 @@
 <div class="flex min-h-screen">
 
     <!-- SIDEBAR -->
-    <aside class="w-64 bg-primary text-white hidden md:flex flex-col">
+    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-50 flex h-screen w-64 -translate-x-full flex-col overflow-y-auto bg-primary text-white transition-transform duration-200 ease-in-out md:static md:h-auto md:translate-x-0 md:shrink-0" aria-label="Main navigation" aria-hidden="true">
 
         <!-- Logo -->
         <div class="p-6 text-2xl font-extrabold border-b border-secondary">
@@ -372,6 +373,8 @@
         </div>
     </aside>
 
+    <button id="sidebarBackdrop" type="button" class="fixed inset-0 z-40 hidden bg-black/50 md:hidden" aria-label="Close navigation menu" tabindex="-1"></button>
+
 
     <!-- MAIN CONTENT AREA -->
     <div class="flex-1 flex flex-col">
@@ -379,9 +382,16 @@
         <!-- TOP NAVBAR -->
         <header class="bg-white dark:bg-secondary shadow-md px-6 py-4 flex justify-between items-center">
 
-            <h1 class="text-xl font-bold text-primary dark:text-white">
-                @yield('page-title', 'Dashboard')
-            </h1>
+            <div class="flex items-center gap-3">
+                <button id="sidebarToggle" type="button" class="rounded-lg p-2 text-primary hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent md:hidden dark:text-white dark:hover:bg-gray-700" aria-controls="appSidebar" aria-expanded="false" aria-label="Open navigation menu">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <h1 class="text-xl font-bold text-primary dark:text-white">
+                    @yield('page-title', 'Dashboard')
+                </h1>
+            </div>
 
             <div class="flex items-center gap-4">
 
@@ -434,6 +444,43 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+
+    const sidebar = document.getElementById('appSidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+    if (sidebar && sidebarToggle && sidebarBackdrop) {
+        const closeSidebar = () => {
+            sidebar.classList.add('-translate-x-full');
+            sidebarBackdrop.classList.add('hidden');
+            sidebarToggle.setAttribute('aria-expanded', 'false');
+            sidebarToggle.setAttribute('aria-label', 'Open navigation menu');
+            sidebar.setAttribute('aria-hidden', window.innerWidth < 768 ? 'true' : 'false');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        const openSidebar = () => {
+            sidebar.classList.remove('-translate-x-full');
+            sidebarBackdrop.classList.remove('hidden');
+            sidebarToggle.setAttribute('aria-expanded', 'true');
+            sidebarToggle.setAttribute('aria-label', 'Close navigation menu');
+            sidebar.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        sidebarToggle.addEventListener('click', () => {
+            sidebarToggle.getAttribute('aria-expanded') === 'true' ? closeSidebar() : openSidebar();
+        });
+        sidebarBackdrop.addEventListener('click', closeSidebar);
+        sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', closeSidebar));
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeSidebar();
+        });
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) closeSidebar();
+        });
+        sidebar.setAttribute('aria-hidden', window.innerWidth < 768 ? 'true' : 'false');
+    }
 
     /* ==========================================
        CONFIGURE NPROGRESS (TOP LOADING BAR)
