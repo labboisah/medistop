@@ -154,6 +154,8 @@ Route::middleware(['auth', 'staff'])
                 Route::post('/lookup', [StaffResultController::class, 'lookup'])->name('lookup');
                 Route::get('/bills/{bill}', [StaffResultController::class, 'entry'])->name('entry');
                 Route::post('/bills/{bill}', [StaffResultController::class, 'store'])->name('store');
+                Route::get('/images/{image}', [StaffResultController::class, 'viewImage'])->name('images.view');
+                Route::get('/images/{image}/download', [StaffResultController::class, 'downloadImage'])->name('images.download');
                 Route::get('/reports', [StaffResultController::class, 'reports'])->name('reports');
                 Route::get('/commission', [StaffResultController::class, 'commission'])->name('commission');
                 Route::get('/{result}/print', [StaffResultController::class, 'print'])->name('print');

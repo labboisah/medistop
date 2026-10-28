@@ -4,14 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Bill;
 use App\Models\BillResult;
+use App\Models\BillResultImage;
 use App\Models\ResultTemplate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class StaffResultController extends Controller
 {
     public function dashboard()
     {
+        $staffType = auth()->user()->staff_type ?? 'staff';
         $dateColumn = $this->activityDateColumn();
 
         $todayResults = $this->activityQuery()
@@ -34,16 +37,37 @@ class StaffResultController extends Controller
             ->limit(5)
             ->get();
 
+        $pendingStudies = $staffType === 'radiologist'
+            ? BillResult::with(['bill', 'billItem.service', 'performer', 'images'])
+                ->where('radiologist_id', auth()->id())
+                ->whereNull('reported_at')
+                ->latest('performed_at')
+                ->limit(5)
+                ->get()
+            : collect();
+
         return view('staff.dashboard', compact(
             'todayResults',
             'monthResults',
             'monthCommission',
-            'recentResults'
+            'recentResults',
+            'pendingStudies',
+            'staffType'
         ));
     }
 
     public function index()
     {
+        if ((auth()->user()->staff_type ?? 'staff') === 'radiologist') {
+            $studies = BillResult::with(['bill', 'billItem.service', 'performer', 'images'])
+                ->where('radiologist_id', auth()->id())
+                ->whereNull('reported_at')
+                ->latest('performed_at')
+                ->paginate(20);
+
+            return view('staff.results.worklist', compact('studies'));
+        }
+
         return view('staff.results.index');
     }
 
@@ -74,9 +98,21 @@ class StaffResultController extends Controller
             'items.service.category',
             'items.result.performer',
             'items.result.reporter',
+            'items.result.assignedRadiologist',
+            'items.result.images',
             'user',
             'payments.user',
         ]);
+
+        $staffType = auth()->user()->staff_type ?? 'staff';
+        if ($staffType === 'radiologist') {
+            $assignedItems = $bill->items->filter(fn ($item) =>
+                (int) ($item->result?->radiologist_id ?? 0) === (int) auth()->id()
+            )->values();
+
+            abort_if($assignedItems->isEmpty(), 403);
+            $bill->setRelation('items', $assignedItems);
+        }
 
         $templates = ResultTemplate::where('user_id', auth()->id())
             ->orderBy('name')
@@ -89,49 +125,109 @@ class StaffResultController extends Controller
             ],
         ])->toArray();
 
-        $staffType = auth()->user()->staff_type ?? 'staff';
+        $radiologists = $staffType === 'radiographer'
+            ? \App\Models\User::where('role', 'staff')->where('staff_type', 'radiologist')->orderBy('name')->get(['id', 'name'])
+            : collect();
 
-        return view('staff.results.entry', compact('bill', 'templates', 'templatePayload', 'staffType'));
+        return view('staff.results.entry', compact('bill', 'templates', 'templatePayload', 'staffType', 'radiologists'));
     }
 
     public function store(Request $request, Bill $bill)
     {
         $this->ensurePaidBill($bill);
 
+        $staffType = auth()->user()->staff_type ?? 'staff';
+
         $validated = $request->validate([
             'bill_item_id' => 'required|exists:bill_items,id',
             'clinical_note' => 'nullable|string',
-            'findings' => auth()->user()->staff_type === 'radiographer' ? 'nullable|string' : 'required|string',
+            'findings' => $staffType === 'radiographer' ? 'nullable|string' : 'required|string',
             'impression' => 'nullable|string',
             'save_template' => 'nullable|boolean',
             'template_name' => 'required_if:save_template,1|nullable|string|max:255',
+            'radiologist_id' => $staffType === 'radiographer' ? 'required|integer|exists:users,id' : 'nullable|integer',
+            'images' => 'nullable|array',
+            'images.*' => [
+                'file',
+                'max:204800',
+                function ($attribute, $file, $fail) {
+                    if (! $file instanceof \Illuminate\Http\UploadedFile) {
+                        return;
+                    }
+
+                    $extension = strtolower($file->getClientOriginalExtension());
+                    $mimeType = strtolower($file->getMimeType() ?? '');
+                    $isImage = str_starts_with($mimeType, 'image/') && $mimeType !== 'image/svg+xml';
+                    $isDicom = in_array($extension, ['dcm', 'dicom'], true)
+                        || in_array($mimeType, ['application/dicom', 'application/dicom+json'], true);
+
+                    if (! $isImage && ! $isDicom) {
+                        $fail('Upload an image or DICOM file.');
+                    }
+                },
+            ],
         ]);
 
         $billItem = $bill->items()->whereKey($validated['bill_item_id'])->firstOrFail();
-        $staffType = auth()->user()->staff_type ?? 'staff';
 
         $existingResult = BillResult::where('bill_item_id', $billItem->id)->first();
 
         if ($staffType === 'radiographer') {
+            if ($existingResult?->reported_at) {
+                abort(403, 'This investigation already has a completed radiologist report.');
+            }
+
             if ($existingResult?->performed_by && $existingResult->performed_by !== auth()->id()) {
                 abort(403, 'This investigation has already been performed by another radiographer.');
             }
 
-            BillResult::updateOrCreate(
+            $radiologist = \App\Models\User::where('role', 'staff')
+                ->where('staff_type', 'radiologist')
+                ->find($validated['radiologist_id']);
+
+            if (! $radiologist) {
+                throw ValidationException::withMessages([
+                    'radiologist_id' => 'Choose an active radiologist account.',
+                ]);
+            }
+
+            $result = BillResult::updateOrCreate(
                 ['bill_item_id' => $billItem->id],
                 [
                     'bill_id' => $bill->id,
                     'staff_id' => $existingResult?->staff_id ?? auth()->id(),
                     'performed_by' => auth()->id(),
-                    'performed_at' => now(),
+                    'performed_at' => $existingResult?->performed_at ?? now(),
+                    'radiologist_id' => $radiologist->id,
                     'findings' => $existingResult?->findings ?? '',
-                    'status' => $existingResult?->reported_at ? 'completed' : 'performed',
+                    'status' => 'pending_report',
                 ]
             );
 
+            foreach ($request->file('images', []) as $image) {
+                $path = $image->store("radiology-images/{$result->id}", 'local');
+
+                BillResultImage::create([
+                    'bill_result_id' => $result->id,
+                    'uploaded_by' => auth()->id(),
+                    'path' => $path,
+                    'original_name' => substr($image->getClientOriginalName(), 0, 255),
+                    'mime_type' => $image->getMimeType() ?: $image->getClientMimeType(),
+                    'file_size' => $image->getSize() ?: 0,
+                ]);
+            }
+
             return redirect()
                 ->route('staff.results.entry', $bill)
-                ->with('success', 'Investigation marked as performed.');
+                ->with('success', "Investigation sent to {$radiologist->name} for reporting.");
+        }
+
+        if ($staffType === 'radiologist' && (int) ($existingResult?->radiologist_id ?? 0) !== (int) auth()->id()) {
+            abort(403, 'This investigation is not assigned to your account.');
+        }
+
+        if ($existingResult?->radiologist_id && $staffType !== 'radiologist') {
+            abort(403, 'Only the assigned radiologist can report on this investigation.');
         }
 
         if ($existingResult && $existingResult->reported_by && $existingResult->reported_by !== auth()->id()) {
@@ -167,9 +263,40 @@ class StaffResultController extends Controller
             );
         }
 
-        return redirect()
-            ->route('staff.results.print', $result)
-            ->with('success', 'Result saved successfully.');
+        if ($staffType === 'radiologist') {
+            return redirect()
+                ->route('staff.results.index')
+                ->with('success', 'Report saved. The radiographer can now print it.');
+        }
+
+        return redirect()->route('staff.results.print', $result)->with('success', 'Result saved successfully.');
+    }
+
+    public function viewImage(BillResultImage $image)
+    {
+        $this->authorizeImageAccess($image);
+
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists($image->path), 404);
+
+        if (! str_starts_with(strtolower($image->mime_type ?? ''), 'image/')) {
+            return $this->downloadImage($image);
+        }
+
+        return response()->file($disk->path($image->path), [
+            'Content-Type' => $image->mime_type,
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function downloadImage(BillResultImage $image)
+    {
+        $this->authorizeImageAccess($image);
+
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists($image->path), 404);
+
+        return $disk->download($image->path, $image->original_name);
     }
 
     public function reports(Request $request)
@@ -243,7 +370,11 @@ class StaffResultController extends Controller
 
     public function print(BillResult $result)
     {
-        if (($result->reported_by ?? $result->staff_id) !== auth()->id()) {
+        $isReporter = $result->reported_by === auth()->id();
+        $isPerformingRadiographer = (auth()->user()->staff_type ?? null) === 'radiographer'
+            && $result->performed_by === auth()->id();
+
+        if (! $result->reported_at || (! $isReporter && ! $isPerformingRadiographer)) {
             abort(403);
         }
 
@@ -254,9 +385,23 @@ class StaffResultController extends Controller
             'performer',
             'reporter',
             'staff',
+            'images',
         ]);
 
         return view('staff.results.print', compact('result'));
+    }
+
+    private function authorizeImageAccess(BillResultImage $image): void
+    {
+        $result = $image->result;
+        $staffType = auth()->user()->staff_type ?? 'staff';
+
+        $isAssignedRadiologist = $staffType === 'radiologist'
+            && (int) $result->radiologist_id === (int) auth()->id();
+        $isPerformingRadiographer = $staffType === 'radiographer'
+            && $result->performed_by === auth()->id();
+
+        abort_unless($isAssignedRadiologist || $isPerformingRadiographer, 403);
     }
 
     private function ensurePaidBill(Bill $bill): void

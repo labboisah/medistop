@@ -12,6 +12,7 @@ class BillResult extends Model
         'staff_id',
         'performed_by',
         'reported_by',
+        'radiologist_id',
         'performed_at',
         'reported_at',
         'clinical_note',
@@ -50,5 +51,15 @@ class BillResult extends Model
     public function reporter()
     {
         return $this->belongsTo(User::class, 'reported_by');
+    }
+
+    public function assignedRadiologist()
+    {
+        return $this->belongsTo(User::class, 'radiologist_id');
+    }
+
+    public function images()
+    {
+        return $this->hasMany(BillResultImage::class);
     }
 }

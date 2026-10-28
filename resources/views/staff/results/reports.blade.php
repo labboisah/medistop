@@ -54,10 +54,10 @@
                     <td class="py-3 px-4">{{ optional($result->reporter)->name ?? optional($result->staff)->name ?? '-' }}</td>
                     <td class="py-3 px-4">{{ optional($staffType === 'radiographer' ? $result->performed_at : ($result->reported_at ?? $result->completed_at))->format('d M Y h:i A') }}</td>
                     <td class="py-3 px-4 text-right">
-                        @if($result->reported_by || $result->staff_id)
+                        @if($result->reported_at)
                             <a href="{{ route('staff.results.print', $result) }}" class="text-primary hover:underline">Print</a>
                         @else
-                            <span class="text-gray-500">Performed</span>
+                            <span class="text-gray-500">Awaiting radiologist</span>
                         @endif
                     </td>
                 </tr>

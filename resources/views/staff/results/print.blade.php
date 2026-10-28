@@ -95,6 +95,16 @@
             line-height: 1.7;
             font-size: 14px;
         }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .image-grid img {
+            max-width: 100%;
+            max-height: 90mm;
+            object-fit: contain;
+        }
         .signature {
             margin-top: 60px;
             display: flex;
@@ -136,6 +146,7 @@
                 width: auto;
                 min-height: auto;
                 padding: 16mm;
+                overflow: visible;
             }
         }
     </style>
@@ -183,6 +194,21 @@
                 <section class="section">
                     <h3>Impression</h3>
                     <div class="content">{{ $result->impression }}</div>
+                </section>
+            @endif
+
+            @if($result->images->isNotEmpty())
+                <section class="section">
+                    <h3>Imaging Attachments</h3>
+                    <div class="image-grid">
+                        @foreach($result->images as $image)
+                            @if(str_starts_with(strtolower($image->mime_type ?? ''), 'image/'))
+                                <img src="{{ route('staff.results.images.view', $image) }}" alt="{{ $image->original_name }}">
+                            @else
+                                <p>{{ $image->original_name }} (available electronically)</p>
+                            @endif
+                        @endforeach
+                    </div>
                 </section>
             @endif
 

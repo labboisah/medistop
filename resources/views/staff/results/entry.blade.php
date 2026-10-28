@@ -4,6 +4,10 @@
 
 @section('content')
 <div class="max-w-6xl mx-auto space-y-6">
+    @if(session('success'))
+        <div class="rounded-xl bg-green-50 p-4 text-green-800">{{ session('success') }}</div>
+    @endif
+
     <div class="bg-white p-6 rounded-2xl shadow">
         <div class="flex flex-wrap gap-4 justify-between">
             <div>
@@ -43,16 +47,50 @@
                             Reported by {{ optional($result->reporter)->name ?? 'Unknown staff' }}
                         </span>
                     @endif
+
+                    @if($result?->radiologist_id)
+                        <span class="px-3 py-1 rounded-full text-xs bg-purple-700 text-white self-start">
+                            Assigned to {{ optional($result->assignedRadiologist)->name ?? 'Radiologist' }}
+                        </span>
+                    @endif
                 </div>
             </div>
+
+            @if($result?->images->isNotEmpty())
+                <div class="mb-6 rounded-xl bg-lightbg p-4">
+                    <h4 class="font-semibold text-primary mb-3">Uploaded imaging</h4>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        @foreach($result->images as $image)
+                            <div class="bg-white rounded-lg border p-3">
+                                @if(str_starts_with(strtolower($image->mime_type ?? ''), 'image/'))
+                                    <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener">
+                                        <img src="{{ route('staff.results.images.view', $image) }}" alt="{{ $image->original_name }}" class="w-full h-48 object-contain rounded">
+                                    </a>
+                                @else
+                                    <div class="h-48 flex items-center justify-center text-sm text-gray-600">{{ $image->original_name }}</div>
+                                @endif
+                                <div class="mt-2 flex items-center justify-between gap-2 text-sm">
+                                    <span class="truncate" title="{{ $image->original_name }}">{{ $image->original_name }}</span>
+                                    <a href="{{ route('staff.results.images.download', $image) }}" class="shrink-0 text-primary hover:underline">Download</a>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             @if($isRadiographer)
                 @if($result?->performed_by && $result->performed_by !== auth()->id())
                     <div class="bg-lightbg p-4 rounded-xl text-sm text-gray-600">
                         This investigation has been marked as performed by {{ optional($result->performer)->name ?? 'another staff member' }}.
                     </div>
+                @elseif($result?->reported_at)
+                    <div class="bg-green-50 p-4 rounded-xl text-sm text-green-800 mb-4">
+                        The radiologist has completed this report. You can now print it.
+                    </div>
+                    <a href="{{ route('staff.results.print', $result) }}" class="inline-block bg-primary text-white px-6 py-3 rounded-xl">Print Completed Report</a>
                 @else
-                    <form method="POST" action="{{ route('staff.results.store', $bill) }}">
+                    <form method="POST" enctype="multipart/form-data" action="{{ route('staff.results.store', $bill) }}" class="space-y-5">
                         @csrf
                         <input type="hidden" name="bill_item_id" value="{{ $item->id }}">
 
@@ -62,8 +100,35 @@
                             </div>
                         @endif
 
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Send images to radiologist</label>
+                            <select name="radiologist_id" required class="w-full px-4 py-3 border rounded-xl">
+                                <option value="">Choose radiologist</option>
+                                @foreach($radiologists as $radiologist)
+                                    <option value="{{ $radiologist->id }}" @selected(old('radiologist_id', $result?->radiologist_id) == $radiologist->id)>
+                                        {{ $radiologist->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @if($radiologists->isEmpty())
+                                <p class="text-amber-700 text-sm mt-2">No radiologist account is available. Ask an administrator to add a radiologist before sending this study.</p>
+                            @endif
+                            @error('radiologist_id')<p class="text-red-600 text-sm mt-2">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Images or DICOM files</label>
+                            <input type="file" name="images[]" multiple accept="image/*,.dcm,.dicom" class="w-full px-4 py-3 border rounded-xl">
+                            <p class="text-xs text-gray-500 mt-2">You can add more than one file. Common image formats and DICOM files are accepted (up to 200 MB per file).</p>
+                            @foreach($errors->getMessages() as $field => $messages)
+                                @if(str_starts_with($field, 'images.'))
+                                    @foreach($messages as $message)<p class="text-red-600 text-sm mt-2">{{ $message }}</p>@endforeach
+                                @endif
+                            @endforeach
+                        </div>
+
                         <button class="bg-accent text-white px-6 py-3 rounded-xl">
-                            {{ $result?->performed_by === auth()->id() ? 'Update Performed Status' : 'Mark as Performed' }}
+                            {{ $result?->performed_by === auth()->id() ? 'Send Update to Radiologist' : 'Send Imaging to Radiologist' }}
                         </button>
                     </form>
                 @endif

@@ -22,15 +22,31 @@
 
 <div class="grid lg:grid-cols-3 gap-6">
     <div class="bg-white p-6 rounded-xl shadow lg:col-span-1">
-        <h3 class="font-bold text-primary mb-4">Start Result Entry</h3>
-        <form method="POST" action="{{ route('staff.results.lookup') }}" class="space-y-4">
-            @csrf
-            <input type="text" name="bill_no" value="{{ old('bill_no') }}"
-                   placeholder="Example: B260719-1234"
-                   class="w-full px-4 py-3 border rounded-xl">
-            @error('bill_no')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
-            <button class="bg-accent text-white px-6 py-3 rounded-xl w-full">Open Bill</button>
-        </form>
+        @if($staffType === 'radiologist')
+            <h3 class="font-bold text-primary mb-2">Assigned Imaging</h3>
+            <p class="text-sm text-gray-600 mb-4">Review the images sent to you and complete the radiology report.</p>
+            <a href="{{ route('staff.results.index') }}" class="inline-block bg-accent text-white px-6 py-3 rounded-xl w-full text-center">Open Imaging Worklist</a>
+            @if($pendingStudies->isNotEmpty())
+                <div class="mt-4 space-y-2">
+                    @foreach($pendingStudies as $study)
+                        <a href="{{ route('staff.results.entry', $study->bill) }}" class="block rounded-lg bg-lightbg p-3 text-sm hover:bg-gray-100">
+                            <span class="font-medium">{{ $study->bill->patient_name ?? 'Walk-in' }}</span>
+                            <span class="text-gray-600">· {{ $study->billItem->service->name }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+        @else
+            <h3 class="font-bold text-primary mb-4">Start Result Entry</h3>
+            <form method="POST" action="{{ route('staff.results.lookup') }}" class="space-y-4">
+                @csrf
+                <input type="text" name="bill_no" value="{{ old('bill_no') }}"
+                       placeholder="Example: B260719-1234"
+                       class="w-full px-4 py-3 border rounded-xl">
+                @error('bill_no')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+                <button class="bg-accent text-white px-6 py-3 rounded-xl w-full">Open Bill</button>
+            </form>
+        @endif
     </div>
 
     <div class="bg-white p-6 rounded-xl shadow lg:col-span-2 overflow-x-auto">
@@ -51,10 +67,10 @@
                         <td class="py-3 px-4">{{ $result->billItem->service->name }}</td>
                         <td class="py-3 px-4">{{ optional($result->performed_at ?? $result->reported_at ?? $result->completed_at)->format('d M Y h:i A') }}</td>
                         <td class="py-3 px-4 text-right">
-                            @if($result->reported_by)
+                            @if($result->reported_at)
                                 <a href="{{ route('staff.results.print', $result) }}" class="text-primary hover:underline">Print</a>
                             @else
-                                <span class="text-gray-500">Performed</span>
+                                <span class="text-gray-500">Awaiting report</span>
                             @endif
                         </td>
                     </tr>
