@@ -15,8 +15,14 @@ class PublicInvestigationBookingController extends Controller
     public function create()
     {
         $services = Service::orderBy('name')->get();
+        $serviceOptions = $services->map(fn ($service) => [
+            'id' => $service->id,
+            'name' => $service->name,
+            'price' => (float) $service->price,
+        ])->values()->all();
+        $oldServiceIds = array_map('intval', (array) old('services', []));
 
-        return view('public-bookings.create', compact('services'));
+        return view('public-bookings.create', compact('serviceOptions', 'oldServiceIds'));
     }
 
     public function store(Request $request)

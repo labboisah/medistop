@@ -49,29 +49,147 @@
 
         <fieldset>
             <legend class="mb-2 text-sm font-semibold">Select investigations</legend>
-            <div class="max-h-72 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3">
-                @forelse($services as $service)
-                    <label class="flex cursor-pointer items-center justify-between gap-3 rounded-md p-2 hover:bg-gray-50">
-                        <span class="flex items-center gap-3">
-                            <input type="checkbox" name="services[]" value="{{ $service->id }}" @checked(in_array((string) $service->id, old('services', []), true)) class="rounded border-gray-300 text-accent focus:ring-accent">
-                            <span class="text-sm">{{ $service->name }}</span>
-                        </span>
-                        <span class="whitespace-nowrap text-sm font-semibold">NGN {{ number_format($service->price, 2) }}</span>
-                    </label>
-                @empty
-                    <p class="p-2 text-sm text-gray-500">No investigations are currently available for booking.</p>
-                @endforelse
+            <div class="relative">
+                <input id="investigationSearch" type="search" role="combobox" aria-autocomplete="list" aria-controls="investigationSearchResults" aria-expanded="false" autocomplete="off" placeholder="Type an investigation name..." class="w-full rounded-lg border-gray-300 px-4 py-3 focus:border-accent focus:ring-accent">
+                <div id="investigationSearchResults" role="listbox" class="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg" style="display:none"></div>
             </div>
+            <p class="mt-2 text-xs text-gray-500">Search and select one or more investigations. Select each investigation only once.</p>
             @error('services')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             @error('services.*')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
         </fieldset>
+
+        <section aria-labelledby="selectedInvestigationsTitle" class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <h2 id="selectedInvestigationsTitle" class="font-semibold text-primary">Selected investigations</h2>
+            <div id="selectedInvestigations" class="mt-3 space-y-2"></div>
+            <p id="noSelectedInvestigations" class="mt-2 text-sm text-gray-500">No investigations selected yet.</p>
+            <div class="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 font-bold">
+                <span>Total amount</span>
+                <span id="investigationTotal">NGN 0.00</span>
+            </div>
+        </section>
+        <div id="selectedServiceInputs"></div>
 
         <label class="flex items-start gap-2 text-xs text-gray-600">
             <input type="checkbox" required class="mt-0.5 rounded border-gray-300 text-accent focus:ring-accent">
             <span>I understand this is a booking request. I will visit the center to confirm the request and pay before the investigation is performed.</span>
         </label>
 
-        <button type="submit" @disabled($services->isEmpty()) class="w-full rounded-lg bg-accent px-5 py-3 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">Submit Booking Request</button>
+        <button type="submit" @disabled(empty($serviceOptions)) class="w-full rounded-lg bg-accent px-5 py-3 font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">Submit Booking Request</button>
     </form>
 </div>
+
+<script>
+    (() => {
+        const services = @json($serviceOptions);
+        const initialIds = @json($oldServiceIds);
+        const search = document.getElementById('investigationSearch');
+        const results = document.getElementById('investigationSearchResults');
+        const selectedList = document.getElementById('selectedInvestigations');
+        const selectedInputs = document.getElementById('selectedServiceInputs');
+        const emptyMessage = document.getElementById('noSelectedInvestigations');
+        const totalDisplay = document.getElementById('investigationTotal');
+        const formatAmount = amount => `NGN ${Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        let selected = services.filter(service => initialIds.includes(Number(service.id)));
+
+        function renderResults() {
+            results.replaceChildren();
+            const term = search.value.trim().toLocaleLowerCase();
+            if (!term) {
+                results.style.display = 'none';
+                search.setAttribute('aria-expanded', 'false');
+                return;
+            }
+
+            const matches = services.filter(service =>
+                service.name.toLocaleLowerCase().includes(term) &&
+                !selected.some(item => Number(item.id) === Number(service.id))
+            );
+
+            if (matches.length === 0) {
+                const message = document.createElement('p');
+                message.className = 'px-4 py-3 text-sm text-gray-500';
+                message.textContent = 'No matching investigations found.';
+                results.appendChild(message);
+            } else {
+                matches.forEach(service => {
+                    const option = document.createElement('button');
+                    option.type = 'button';
+                    option.setAttribute('role', 'option');
+                    option.className = 'flex w-full items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 text-left text-sm last:border-0 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none';
+
+                    const name = document.createElement('span');
+                    name.textContent = service.name;
+                    const price = document.createElement('span');
+                    price.className = 'whitespace-nowrap font-semibold text-primary';
+                    price.textContent = formatAmount(service.price);
+                    option.append(name, price);
+                    option.addEventListener('click', () => {
+                        selected.push(service);
+                        search.value = '';
+                        renderSelected();
+                        renderResults();
+                        search.focus();
+                    });
+                    results.appendChild(option);
+                });
+            }
+
+            results.style.display = 'block';
+            search.setAttribute('aria-expanded', 'true');
+        }
+
+        function renderSelected() {
+            selectedList.replaceChildren();
+            selectedInputs.replaceChildren();
+            let total = 0;
+
+            selected.forEach(service => {
+                total += Number(service.price);
+
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm';
+                const name = document.createElement('span');
+                name.className = 'font-medium text-gray-800';
+                name.textContent = service.name;
+                const actions = document.createElement('div');
+                actions.className = 'flex items-center gap-3';
+                const price = document.createElement('span');
+                price.className = 'whitespace-nowrap font-semibold text-primary';
+                price.textContent = formatAmount(service.price);
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'font-semibold text-red-600 hover:text-red-800';
+                remove.textContent = 'Remove';
+                remove.setAttribute('aria-label', `Remove ${service.name}`);
+                remove.addEventListener('click', () => {
+                    selected = selected.filter(item => Number(item.id) !== Number(service.id));
+                    renderSelected();
+                    renderResults();
+                });
+                actions.append(price, remove);
+                row.append(name, actions);
+                selectedList.appendChild(row);
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'services[]';
+                input.value = service.id;
+                selectedInputs.appendChild(input);
+            });
+
+            emptyMessage.style.display = selected.length ? 'none' : 'block';
+            totalDisplay.textContent = formatAmount(total);
+        }
+
+        search.addEventListener('input', renderResults);
+        document.addEventListener('click', event => {
+            if (!event.target.closest('#investigationSearch') && !event.target.closest('#investigationSearchResults')) {
+                results.style.display = 'none';
+                search.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        renderSelected();
+    })();
+</script>
 @endsection
