@@ -159,7 +159,7 @@ class Summary implements FromArray, WithEvents, WithDrawings
     }
 
     /* ---------- LOGO ---------- */
-    public function drawings()
+    public function drawings(): Drawing
     {
         $drawing = new Drawing();
         $drawing->setName('Company Logo');

@@ -3,6 +3,7 @@
 namespace App\Exports\Sheets;
 
 use App\Models\Bill;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 
@@ -19,7 +20,7 @@ class DetailedBills implements FromCollection, WithHeadings
         $this->isAdmin = $isAdmin;
     }
 
-    public function collection()
+    public function collection(): Collection
     {
         $query = Bill::whereBetween('created_at', [$this->from,$this->to]);
         
