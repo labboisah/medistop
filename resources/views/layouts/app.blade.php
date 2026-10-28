@@ -483,7 +483,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (sidebar && sidebarToggle && sidebarBackdrop) {
         const isDesktop = () => window.innerWidth >= 768;
-        let sidebarOpen = false;
+        let sidebarOpen = isDesktop();
 
         const updateSidebar = () => {
             sidebar.dataset.state = sidebarOpen ? 'open' : 'closed';
