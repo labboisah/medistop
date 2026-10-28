@@ -9,6 +9,30 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
+        #appSidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            z-index: 50;
+            width: 16rem;
+            height: 100vh;
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 200ms ease-in-out;
+        }
+        #appSidebar[data-state="open"] { transform: translateX(0); }
+        #appSidebar[data-state="closed"] { display: none; }
+        #sidebarBackdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            border: 0;
+            background: rgb(0 0 0 / 50%);
+        }
+        #sidebarBackdrop[data-visible="false"] { display: none; }
+        @media (min-width: 768px) {
+            #appSidebar { position: relative; height: auto; transform: none; }
+            #sidebarBackdrop { display: none; }
+        }
         #nprogress .bar {
             background: #16A34A !important; /* accent green */
             height: 3px;
@@ -21,7 +45,7 @@
 <div class="flex min-h-screen">
 
     <!-- SIDEBAR -->
-    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-50 flex h-screen w-64 -translate-x-full flex-col overflow-y-auto bg-primary text-white transition-transform duration-200 ease-in-out md:static md:h-auto md:translate-x-0 md:shrink-0" aria-label="Main navigation" aria-hidden="true">
+    <aside id="appSidebar" data-state="closed" class="flex w-64 shrink-0 flex-col bg-primary text-white" aria-label="Main navigation" aria-hidden="true">
 
         <!-- Logo -->
         <div class="p-6 text-2xl font-extrabold border-b border-secondary">
@@ -373,7 +397,7 @@
         </div>
     </aside>
 
-    <button id="sidebarBackdrop" type="button" class="fixed inset-0 z-40 hidden bg-black/50 md:hidden" aria-label="Close navigation menu" tabindex="-1"></button>
+    <button id="sidebarBackdrop" type="button" data-visible="false" aria-label="Close navigation menu" tabindex="-1"></button>
 
 
     <!-- MAIN CONTENT AREA -->
@@ -454,19 +478,10 @@ document.addEventListener("DOMContentLoaded", function () {
         let sidebarOpen = false;
 
         const updateSidebar = () => {
-            if (isDesktop()) {
-                sidebar.classList.toggle('md:hidden', !sidebarOpen);
-                sidebar.classList.remove('-translate-x-full');
-                sidebarBackdrop.classList.add('hidden');
-                document.body.classList.remove('overflow-hidden');
-                sidebar.setAttribute('aria-hidden', sidebarOpen ? 'false' : 'true');
-            } else {
-                sidebar.classList.remove('md:hidden');
-                sidebar.classList.toggle('-translate-x-full', !sidebarOpen);
-                sidebarBackdrop.classList.toggle('hidden', !sidebarOpen);
-                document.body.classList.toggle('overflow-hidden', sidebarOpen);
-                sidebar.setAttribute('aria-hidden', sidebarOpen ? 'false' : 'true');
-            }
+            sidebar.dataset.state = sidebarOpen ? 'open' : 'closed';
+            sidebarBackdrop.dataset.visible = sidebarOpen && !isDesktop() ? 'true' : 'false';
+            document.body.classList.toggle('overflow-hidden', sidebarOpen && !isDesktop());
+            sidebar.setAttribute('aria-hidden', sidebarOpen ? 'false' : 'true');
 
             sidebarToggle.setAttribute('aria-expanded', sidebarOpen ? 'true' : 'false');
             sidebarToggle.setAttribute('aria-label', sidebarOpen ? 'Close navigation menu' : 'Open navigation menu');
@@ -482,9 +497,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const toggleSidebar = () => {
             sidebarOpen = !sidebarOpen;
-            sidebar.classList.add('-translate-x-full');
-            if (sidebarOpen) sidebar.classList.remove('md:hidden');
-            else if (isDesktop()) sidebar.classList.add('md:hidden');
             updateSidebar();
         };
 
