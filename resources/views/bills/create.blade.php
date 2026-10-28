@@ -1,19 +1,24 @@
 @extends('layouts.app')
 
-@section('page-title', 'Record New Bill')
+@section('page-title', ($requestMode ?? false) ? 'Investigation Request' : 'Record New Bill')
 
 @section('content')
 
 <div class="max-w-5xl mx-auto bg-white p-8 rounded-2xl shadow">
 
-<form method="POST" action="{{ route('bills.store') }}">
+@if($requestMode ?? false)
+    <p class="mb-6 text-sm text-gray-600">Register the patient and requested investigations. Payment will be received and approved at the center desk.</p>
+@endif
+
+<form method="POST" action="{{ ($requestMode ?? false) ? route('investigation-requests.store') : route('bills.store') }}">
 @csrf
 
 <!-- Patient -->
 <div class="mb-6">
     <label class="block text-sm mb-2 font-medium">Patient Name</label>
-    <input type="text" name="patient_name"
+    <input type="text" name="patient_name" value="{{ old('patient_name') }}" {{ ($requestMode ?? false) ? 'required' : '' }}
            class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
+    @error('patient_name')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
 </div>
 <div class="mb-6">
     <label class="block text-sm mb-2 font-medium">Gender</label>
@@ -90,6 +95,10 @@
 
 </div>
 
+@error('services')
+    <p class="mb-4 text-sm text-red-600">{{ $message }}</p>
+@enderror
+
 <!-- SELECTED SERVICES TABLE -->
 <div class="mb-6">
 
@@ -125,7 +134,7 @@
 
 <button type="submit"
         class="bg-primary text-white px-8 py-3 rounded-xl hover:bg-secondary transition">
-    Save Bill
+    {{ ($requestMode ?? false) ? 'Register Investigation Request' : 'Save Bill' }}
 </button>
 
 </form>

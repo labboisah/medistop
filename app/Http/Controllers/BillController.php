@@ -30,13 +30,47 @@ class BillController extends Controller
         return view('bills.create', compact('services'));
     }
 
+    public function createRequest()
+    {
+        $services = Service::orderBy('name')->get();
+        $requestMode = true;
+
+        return view('bills.create', compact('services', 'requestMode'));
+    }
+
+    public function showRequest(Bill $bill)
+    {
+        if (auth()->user()->role === 'staff' && $bill->user_id !== auth()->id()) {
+            abort(403, 'You can only view investigation requests you registered.');
+        }
+
+        $bill->load('items.service', 'user', 'payments.user');
+
+        return view('investigation-requests.show', compact('bill'));
+    }
+
+    public function storeRequest(Request $request)
+    {
+        $request->validate([
+            'patient_name' => 'required|string|max:255',
+            'gender' => 'nullable|in:male,female',
+            'less_than_year' => 'nullable|boolean',
+            'age_years' => 'nullable|integer|min:0|max:150',
+            'age_months' => 'nullable|integer|min:0|max:11',
+            'services' => 'required|array|min:1',
+            'services.*' => 'exists:services,id',
+        ]);
+
+        return $this->store($request, true);
+    }
+
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, bool $requestMode = false)
     {
         $request->validate([
-            'patient_name' => 'nullable|string',
+            'patient_name' => $requestMode ? 'required|string|max:255' : 'nullable|string|max:255',
             'gender' => 'nullable|in:male,female',
             'less_than_year' => 'nullable|boolean',
             'age_years' => 'nullable|integer|min:0|max:150',
@@ -97,6 +131,11 @@ class BillController extends Controller
             'balance' => $finalAmount,
             'payment_status' => 'unpaid',
         ]);
+
+        if ($requestMode) {
+            return redirect()->route('investigation-requests.show', $bill)
+                ->with('success', 'Investigation request registered. The patient can now proceed to the center desk for payment.');
+        }
 
         return redirect()->route('payments.create',$bill)
             ->with('success', 'Bill recorded successfully.');

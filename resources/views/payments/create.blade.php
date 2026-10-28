@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('page-title', 'Record Payment')
+@section('page-title', 'Accept Payment')
 
 @section('content')
 
@@ -61,7 +61,8 @@
 
     <div class="bg-white p-8 rounded-2xl shadow">
 
-        <h3 class="text-lg font-bold mb-6">Add Payment</h3>
+        <h3 class="text-lg font-bold mb-2">Accept and Record Payment</h3>
+        <p class="mb-6 text-sm text-gray-500">Confirm the amount received from the patient. A receipt is available after payment is recorded.</p>
 
         <form method="POST" action="{{ route('payments.store') }}" class="space-y-6">
             @csrf
@@ -91,7 +92,7 @@
             </div>
 
             <button class="bg-accent text-white px-8 py-3 rounded-xl">
-                Record Payment
+                Approve Payment
             </button>
 
         </form>

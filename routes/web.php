@@ -50,6 +50,15 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
+Route::middleware('auth')
+    ->prefix('investigation-requests')
+    ->name('investigation-requests.')
+    ->group(function () {
+        Route::get('/create', [BillController::class, 'createRequest'])->name('create');
+        Route::post('/', [BillController::class, 'storeRequest'])->name('store');
+        Route::get('/{bill}', [BillController::class, 'showRequest'])->name('show');
+    });
+
 Route::middleware(['auth', 'admin'])
     ->prefix('admin')
     ->name('admin.')
