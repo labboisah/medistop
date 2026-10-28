@@ -383,7 +383,7 @@
         <header class="bg-white dark:bg-secondary shadow-md px-6 py-4 flex justify-between items-center">
 
             <div class="flex items-center gap-3">
-                <button id="sidebarToggle" type="button" class="rounded-lg p-2 text-primary hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent md:hidden dark:text-white dark:hover:bg-gray-700" aria-controls="appSidebar" aria-expanded="false" aria-label="Open navigation menu">
+                <button id="sidebarToggle" type="button" class="rounded-lg p-2 text-primary hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-accent dark:text-white dark:hover:bg-gray-700" aria-controls="appSidebar" aria-expanded="false" aria-label="Open navigation menu">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
@@ -450,36 +450,53 @@ document.addEventListener("DOMContentLoaded", function () {
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 
     if (sidebar && sidebarToggle && sidebarBackdrop) {
+        const isDesktop = () => window.innerWidth >= 768;
+        let sidebarOpen = isDesktop();
+
+        const updateSidebar = () => {
+            if (isDesktop()) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarBackdrop.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+                sidebar.setAttribute('aria-hidden', sidebarOpen ? 'false' : 'true');
+            } else {
+                sidebar.classList.remove('md:hidden');
+                sidebar.classList.toggle('-translate-x-full', !sidebarOpen);
+                sidebarBackdrop.classList.toggle('hidden', !sidebarOpen);
+                document.body.classList.toggle('overflow-hidden', sidebarOpen);
+                sidebar.setAttribute('aria-hidden', sidebarOpen ? 'false' : 'true');
+            }
+
+            sidebarToggle.setAttribute('aria-expanded', sidebarOpen ? 'true' : 'false');
+            sidebarToggle.setAttribute('aria-label', sidebarOpen ? 'Close navigation menu' : 'Open navigation menu');
+        };
+
         const closeSidebar = () => {
+            sidebarOpen = false;
+            if (isDesktop()) {
+                sidebar.classList.add('md:hidden');
+            }
+            updateSidebar();
+        };
+
+        const toggleSidebar = () => {
+            sidebarOpen = !sidebarOpen;
             sidebar.classList.add('-translate-x-full');
-            sidebarBackdrop.classList.add('hidden');
-            sidebarToggle.setAttribute('aria-expanded', 'false');
-            sidebarToggle.setAttribute('aria-label', 'Open navigation menu');
-            sidebar.setAttribute('aria-hidden', window.innerWidth < 768 ? 'true' : 'false');
-            document.body.classList.remove('overflow-hidden');
+            if (sidebarOpen) sidebar.classList.remove('md:hidden');
+            else if (isDesktop()) sidebar.classList.add('md:hidden');
+            updateSidebar();
         };
 
-        const openSidebar = () => {
-            sidebar.classList.remove('-translate-x-full');
-            sidebarBackdrop.classList.remove('hidden');
-            sidebarToggle.setAttribute('aria-expanded', 'true');
-            sidebarToggle.setAttribute('aria-label', 'Close navigation menu');
-            sidebar.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('overflow-hidden');
-        };
-
-        sidebarToggle.addEventListener('click', () => {
-            sidebarToggle.getAttribute('aria-expanded') === 'true' ? closeSidebar() : openSidebar();
-        });
+        sidebarToggle.addEventListener('click', toggleSidebar);
         sidebarBackdrop.addEventListener('click', closeSidebar);
-        sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', closeSidebar));
+        sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+            if (!isDesktop()) closeSidebar();
+        }));
         document.addEventListener('keydown', event => {
-            if (event.key === 'Escape') closeSidebar();
+            if (event.key === 'Escape' && sidebarOpen && !isDesktop()) closeSidebar();
         });
-        window.addEventListener('resize', () => {
-            if (window.innerWidth >= 768) closeSidebar();
-        });
-        sidebar.setAttribute('aria-hidden', window.innerWidth < 768 ? 'true' : 'false');
+        window.addEventListener('resize', updateSidebar);
+        updateSidebar();
     }
 
     /* ==========================================
