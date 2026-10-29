@@ -63,6 +63,7 @@ Route::middleware('auth')
     ->prefix('investigation-requests')
     ->name('investigation-requests.')
     ->group(function () {
+        Route::get('/', [BillController::class, 'requestIndex'])->name('index');
         Route::get('/create', [BillController::class, 'createRequest'])->name('create');
         Route::post('/', [BillController::class, 'storeRequest'])->name('store');
         Route::get('/{bill}', [BillController::class, 'showRequest'])->name('show');

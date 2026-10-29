@@ -21,6 +21,33 @@ class BillController extends Controller
         return view('bills.index', compact('bills'));
     }
 
+    public function requestIndex(Request $request)
+    {
+        $search = trim((string) $request->query('q', ''));
+        $items = BillItem::query()
+            ->with(['bill.user', 'service', 'result.images'])
+            ->whereHas('bill', function ($query) {
+                if (auth()->user()->role === 'staff') {
+                    $query->where('user_id', auth()->id());
+                }
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->whereHas('bill', function ($billQuery) use ($search) {
+                        $billQuery->where('bill_no', 'like', "%{$search}%")
+                            ->orWhere('patient_name', 'like', "%{$search}%");
+                    })->orWhereHas('service', function ($serviceQuery) use ($search) {
+                        $serviceQuery->where('name', 'like', "%{$search}%");
+                    });
+                });
+            })
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('investigation-requests.index', compact('items', 'search'));
+    }
+
     /**
      * Show the form for creating a new resource.
      */
