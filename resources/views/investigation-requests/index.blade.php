@@ -5,20 +5,20 @@
 
 @section('content')
 <div class="space-y-6">
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex items-center justify-between gap-4" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:1rem;">
         <div>
             <h2 class="text-2xl font-bold text-primary dark:text-white">Investigation Requests</h2>
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">View payment, imaging, and report progress for each requested investigation.</p>
         </div>
-        <a href="{{ route('investigation-requests.create') }}" class="inline-flex shrink-0 items-center gap-2 self-start rounded-lg bg-accent px-5 py-2 text-white shadow transition hover:bg-green-600 sm:self-auto">
+        <a href="{{ route('investigation-requests.create') }}" class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent px-5 py-2 text-white shadow transition hover:bg-green-600" style="white-space:nowrap;">
             <span aria-hidden="true">+</span> New Investigation
         </a>
     </div>
 
     <section class="overflow-hidden rounded-xl bg-white shadow dark:bg-secondary">
         <div class="border-b border-gray-200 p-4 dark:border-gray-700">
-            <div class="flex flex-col gap-3 md:flex-row md:items-end">
-                <div class="relative min-w-0 flex-1">
+            <div class="flex items-end gap-3 overflow-x-auto" style="display:flex; flex-direction:row; flex-wrap:nowrap; align-items:flex-end; gap:.75rem; overflow-x:auto;">
+                <div class="relative min-w-0 flex-1" style="flex:1 1 auto; min-width:16rem;">
                     <label for="investigation-search" class="sr-only">Search investigations</label>
                     <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <circle cx="11" cy="11" r="7" stroke-width="2" />
@@ -26,11 +26,11 @@
                     </svg>
                     <input id="investigation-search" type="search" placeholder="Search by patient, bill number, or investigation..." class="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
                 </div>
-                <div class="md:w-44 md:shrink-0">
+                <div class="shrink-0" style="flex:0 0 11rem;">
                     <label for="investigation-date-from" class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">From date</label>
                     <input id="investigation-date-from" type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
                 </div>
-                <div class="md:w-44 md:shrink-0">
+                <div class="shrink-0" style="flex:0 0 11rem;">
                     <label for="investigation-date-to" class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">To date</label>
                     <input id="investigation-date-to" type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
                 </div>
