@@ -26,9 +26,19 @@ class ReportController extends Controller
         return auth()->check() && auth()->user()->role === 'admin';
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $reports = Report::with('user')->latest()->paginate(20)->withQueryString();
+        $search = trim((string) $request->query('search', ''));
+        $from = $request->query('from', '');
+        $to = $request->query('to', '');
+        $reports = Report::with('user')
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('report_reference', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%"));
+            }))
+            ->when($from !== '', fn ($query) => $query->whereDate('created_at', '>=', $from))
+            ->when($to !== '', fn ($query) => $query->whereDate('created_at', '<=', $to))
+            ->latest()->paginate(20)->withQueryString();
 
         $stats = Report::selectRaw(
             'COUNT(*) as total_reports, '
@@ -47,7 +57,7 @@ class ReportController extends Controller
 
         $users = User::orderBy('name')->get();
 
-        return view('admin.reports.index', compact('reports', 'stats', 'users'));
+        return view('admin.reports.index', compact('reports', 'stats', 'users', 'search', 'from', 'to'));
     }
 
     public function generate(Request $request)

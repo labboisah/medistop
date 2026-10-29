@@ -9,10 +9,30 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::latest()->paginate(10)->withQueryString();
-        return view('admin.users.index', compact('users'));
+        $filters = $request->validate([
+            'search' => 'nullable|string|max:255',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+        ]);
+        $search = trim($filters['search'] ?? '');
+        $from = $filters['from'] ?? '';
+        $to = $filters['to'] ?? '';
+        $users = User::query()
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('role', 'like', "%{$search}%")
+                    ->orWhere('designation', 'like', "%{$search}%")
+                    ->orWhere('staff_type', 'like', "%{$search}%");
+            }))
+            ->when($from !== '', fn ($query) => $query->whereDate('created_at', '>=', $from))
+            ->when($to !== '', fn ($query) => $query->whereDate('created_at', '<=', $to))
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+        return view('admin.users.index', compact('users', 'search', 'from', 'to'));
     }
 
     public function create()

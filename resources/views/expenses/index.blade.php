@@ -20,6 +20,8 @@
     </p>
 </div>
 
+@include('components.table-filters', ['routeName' => 'expenses.index', 'searchPlaceholder' => 'Search expense, category, or recorder...'])
+
 <div class="bg-white rounded-xl shadow p-6 overflow-x-auto">
 
 <table class="w-full text-sm">
@@ -59,9 +61,7 @@
     </tbody>
 </table>
 
-<div class="mt-6">
-    {{ $expenses->links() }}
-</div>
+@include('components.table-pagination', ['paginator' => $expenses])
 
 </div>
 

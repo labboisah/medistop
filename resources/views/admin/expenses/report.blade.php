@@ -32,7 +32,7 @@
 
     <div class="bg-white p-6 rounded-xl shadow">
         <p class="text-sm text-gray-500">Records</p>
-        <p class="text-2xl font-bold text-primary">{{ $expenses->count() }}</p>
+        <p class="text-2xl font-bold text-primary">{{ $recordCount }}</p>
     </div>
 
     <div class="bg-white p-6 rounded-xl shadow">
@@ -89,6 +89,7 @@
 
 <div class="bg-white rounded-xl shadow p-6 overflow-x-auto">
     <h3 class="font-bold text-primary mb-4">Expense Details</h3>
+    @include('components.table-filters', ['routeName' => 'admin.expenses.report', 'searchPlaceholder' => 'Search expense, category, or recorder...'])
     <table class="w-full text-sm text-left">
         <thead class="border-b bg-lightbg">
             <tr>
@@ -117,5 +118,6 @@
         @endforelse
         </tbody>
     </table>
+    @include('components.table-pagination', ['paginator' => $expenses])
 </div>
 @endsection

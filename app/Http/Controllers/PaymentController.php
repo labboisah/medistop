@@ -14,14 +14,30 @@ class PaymentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $payments = \App\Models\Payment::with('bill','user')
+        $filters = $request->validate([
+            'search' => 'nullable|string|max:255',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+        ]);
+        $search = trim($filters['search'] ?? '');
+        $from = $filters['from'] ?? '';
+        $to = $filters['to'] ?? '';
+        $payments = \App\Models\Payment::with('bill', 'user')
+                        ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                            $query->where('payment_method', 'like', "%{$search}%")
+                                ->orWhereHas('bill', fn ($bill) => $bill->where('bill_no', 'like', "%{$search}%")
+                                    ->orWhere('patient_name', 'like', "%{$search}%"))
+                                ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%"));
+                        }))
+                        ->when($from !== '', fn ($query) => $query->whereDate('created_at', '>=', $from))
+                        ->when($to !== '', fn ($query) => $query->whereDate('created_at', '<=', $to))
                         ->latest()
                         ->paginate(15)
                         ->withQueryString();
 
-        return view('payments.index', compact('payments'));
+        return view('payments.index', compact('payments', 'search', 'from', 'to'));
     }
 
     /**

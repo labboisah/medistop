@@ -11,7 +11,11 @@
         </span>
     </div>
 
-    <form method="GET" action="{{ route('staff.results.commission') }}" class="grid md:grid-cols-3 gap-4 items-end">
+    <form method="GET" action="{{ route('staff.results.commission') }}" class="grid md:grid-cols-4 gap-4 items-end">
+        <div class="md:col-span-2">
+            <label class="block text-sm font-medium mb-2">Search</label>
+            <input type="search" name="search" value="{{ $search }}" placeholder="Bill, patient, or investigation" oninput="clearTimeout(this._filterTimer); this._filterTimer = setTimeout(() => this.form.requestSubmit(), 400)" class="w-full px-4 py-3 border rounded-xl">
+        </div>
         <div>
             <label class="block text-sm font-medium mb-2">From Date</label>
             <input type="date" name="from" value="{{ $from }}"
@@ -25,12 +29,12 @@
         </div>
 
         <div class="flex gap-3">
-            <button class="bg-primary text-white px-6 py-3 rounded-xl">Search</button>
+            <button class="bg-primary text-white px-6 py-3 rounded-xl">Apply filters</button>
             <a href="{{ route('staff.results.commission') }}" class="bg-gray-200 text-primary px-6 py-3 rounded-xl">Reset</a>
         </div>
 
-        @error('from')<p class="text-red-600 text-sm md:col-span-3">{{ $message }}</p>@enderror
-        @error('to')<p class="text-red-600 text-sm md:col-span-3">{{ $message }}</p>@enderror
+        @error('from')<p class="text-red-600 text-sm md:col-span-4">{{ $message }}</p>@enderror
+        @error('to')<p class="text-red-600 text-sm md:col-span-4">{{ $message }}</p>@enderror
     </form>
 </div>
 
@@ -89,7 +93,7 @@
     </table>
 
     <div class="mt-6">
-        {{ $results->links() }}
+        @include('components.table-pagination', ['paginator' => $results])
     </div>
 </div>
 @endsection

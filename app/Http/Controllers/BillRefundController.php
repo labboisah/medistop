@@ -19,15 +19,30 @@ class BillRefundController extends Controller
         ];
     }
 
-    public function index()
+    public function index(Request $request)
     {
+        $filters = $request->validate([
+            'search' => 'nullable|string|max:255',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+        ]);
+        $search = trim($filters['search'] ?? '');
+        $from = $filters['from'] ?? '';
+        $to = $filters['to'] ?? '';
         $refunds = BillRefund::with('bill')
             ->where('user_id', auth()->id())
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('reason', 'like', "%{$search}%")
+                    ->orWhereHas('bill', fn ($bill) => $bill->where('bill_no', 'like', "%{$search}%")
+                        ->orWhere('patient_name', 'like', "%{$search}%"));
+            }))
+            ->when($from !== '', fn ($query) => $query->whereDate('created_at', '>=', $from))
+            ->when($to !== '', fn ($query) => $query->whereDate('created_at', '<=', $to))
             ->latest()
             ->paginate(15)
             ->withQueryString();
 
-        return view('refunds.index', compact('refunds'));
+        return view('refunds.index', compact('refunds', 'search', 'from', 'to'));
     }
 
     public function create(Request $request)

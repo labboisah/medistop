@@ -36,15 +36,18 @@
     <form method="GET" action="{{ route('admin.expenses.index') }}" class="grid md:grid-cols-5 gap-4">
         <input type="text" name="search" value="{{ request('search') }}"
                placeholder="Search title, category, user"
+               oninput="clearTimeout(this._filterTimer); this._filterTimer = setTimeout(() => this.form.requestSubmit(), 400)"
                class="px-4 py-3 border rounded-xl md:col-span-2">
 
         <input type="date" name="from" value="{{ request('from') }}"
+               onchange="this.form.requestSubmit()"
                class="px-4 py-3 border rounded-xl">
 
         <input type="date" name="to" value="{{ request('to') }}"
+               onchange="this.form.requestSubmit()"
                class="px-4 py-3 border rounded-xl">
 
-        <select name="category" class="px-4 py-3 border rounded-xl">
+        <select name="category" onchange="this.form.requestSubmit()" class="px-4 py-3 border rounded-xl">
             <option value="">All categories</option>
             @foreach($categories as $category)
                 <option value="{{ $category }}" {{ request('category') === $category ? 'selected' : '' }}>
@@ -53,7 +56,7 @@
             @endforeach
         </select>
 
-        <select name="user_id" class="px-4 py-3 border rounded-xl">
+        <select name="user_id" onchange="this.form.requestSubmit()" class="px-4 py-3 border rounded-xl">
             <option value="">All users</option>
             @foreach($users as $user)
                 <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
@@ -129,8 +132,6 @@
         </tbody>
     </table>
 
-    <div class="mt-6">
-        {{ $expenses->links() }}
-    </div>
+    @include('components.table-pagination', ['paginator' => $expenses])
 </div>
 @endsection

@@ -14,6 +14,7 @@
     </div>
 
     <div class="bg-white rounded-2xl shadow overflow-x-auto">
+        @include('components.table-filters', ['routeName' => 'staff.results.index', 'searchPlaceholder' => 'Search patient, bill, investigation, or radiographer...'])
         <table class="w-full text-sm">
             <thead class="border-b bg-lightbg">
                 <tr>
@@ -45,7 +46,7 @@
                 @endforelse
             </tbody>
         </table>
-        <div class="p-4">{{ $studies->links() }}</div>
+        <div class="p-4">@include('components.table-pagination', ['paginator' => $studies])</div>
     </div>
 </div>
 @endsection

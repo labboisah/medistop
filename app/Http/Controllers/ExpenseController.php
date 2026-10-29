@@ -8,14 +8,33 @@ use Illuminate\Http\Request;
 
 class ExpenseController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $expenses = Expense::latest()->paginate(15)->withQueryString();
+        $filters = $request->validate([
+            'search' => 'nullable|string|max:255',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+        ]);
+        $search = trim($filters['search'] ?? '');
+        $from = $filters['from'] ?? '';
+        $to = $filters['to'] ?? '';
+        $expenses = Expense::with('user')
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('title', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%"));
+            }))
+            ->when($from !== '', fn ($query) => $query->whereDate('expense_date', '>=', $from))
+            ->when($to !== '', fn ($query) => $query->whereDate('expense_date', '<=', $to))
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
 
         $todayTotal = Expense::whereDate('expense_date', today())
             ->sum('amount');
 
-        return view('expenses.index', compact('expenses','todayTotal'));
+        return view('expenses.index', compact('expenses', 'todayTotal', 'search', 'from', 'to'));
     }
 
     public function create()
@@ -144,7 +163,8 @@ class ExpenseController extends Controller
         $expenses = (clone $query)
             ->latest('expense_date')
             ->latest()
-            ->get();
+            ->paginate(50)
+            ->withQueryString();
 
         $categoryTotals = (clone $query)
             ->selectRaw('COALESCE(category, "Uncategorized") as category_name, SUM(amount) as total, COUNT(*) as count')
@@ -159,7 +179,8 @@ class ExpenseController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $totalAmount = $expenses->sum('amount');
+        $totalAmount = (clone $query)->sum('amount');
+        $recordCount = (clone $query)->count();
         $reportId = 'EXP-' . now()->format('YmdHis');
 
         return view('admin.expenses.report', compact(
@@ -167,6 +188,7 @@ class ExpenseController extends Controller
             'categoryTotals',
             'userTotals',
             'totalAmount',
+            'recordCount',
             'reportId'
         ));
     }

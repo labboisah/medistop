@@ -12,13 +12,29 @@ class ServiceController extends Controller
     /**
      * Display a listing of services.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $services = Service::with('category')
-            ->latest()
-            ->get();
+        $filters = $request->validate([
+            'search' => 'nullable|string|max:255',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+        ]);
+        $search = trim($filters['search'] ?? '');
+        $from = $filters['from'] ?? '';
+        $to = $filters['to'] ?? '';
 
-        return view('admin.services.index', compact('services'));
+        $services = Service::with('category')
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('category', fn ($category) => $category->where('name', 'like', "%{$search}%"));
+            }))
+            ->when($from !== '', fn ($query) => $query->whereDate('created_at', '>=', $from))
+            ->when($to !== '', fn ($query) => $query->whereDate('created_at', '<=', $to))
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('admin.services.index', compact('services', 'search', 'from', 'to'));
     }
 
     /**

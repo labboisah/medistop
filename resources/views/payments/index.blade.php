@@ -10,6 +10,8 @@
     </h2>
 </div>
 
+@include('components.table-filters', ['routeName' => 'payments.index', 'searchPlaceholder' => 'Search bill, patient, method, or recorder...'])
+
 <div class="bg-white rounded-2xl shadow p-6 overflow-x-auto">
 
     <table class="w-full text-sm text-left">
@@ -84,9 +86,7 @@
 
     </table>
 
-    <div class="mt-6">
-        {{ $payments->links() }}
-    </div>
+    @include('components.table-pagination', ['paginator' => $payments])
 
 </div>
 

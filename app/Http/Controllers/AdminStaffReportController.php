@@ -12,6 +12,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
 class AdminStaffReportController extends Controller
@@ -19,9 +20,10 @@ class AdminStaffReportController extends Controller
     public function index(Request $request)
     {
         [$from, $to, $staffId] = $this->filters($request);
+        $search = trim((string) $request->query('search', ''));
 
         $staffMembers = User::where('role', 'staff')->orderBy('name')->get();
-        $results = $this->baseQuery($from, $to, $staffId)
+        $results = $this->baseQuery($from, $to, $staffId, $search)
             ->latest('updated_at')
             ->paginate(20)
             ->withQueryString();
@@ -32,7 +34,7 @@ class AdminStaffReportController extends Controller
             return $result;
         });
 
-        $summary = $this->buildSummary($from, $to, $staffId);
+        $summary = $this->buildSummary($from, $to, $staffId, $search);
         $totalResults = $summary->sum('total_results');
         $totalBillAmount = $summary->sum('total_bill_amount');
         $totalCommission = $summary->sum('total_commission');
@@ -46,14 +48,16 @@ class AdminStaffReportController extends Controller
             'totalCommission',
             'from',
             'to',
-            'staffId'
+            'staffId',
+            'search'
         ));
     }
 
     public function download(Request $request)
     {
         [$from, $to, $staffId] = $this->filters($request);
-        $summary = $this->buildSummary($from, $to, $staffId);
+        $search = trim((string) $request->query('search', ''));
+        $summary = $this->buildSummary($from, $to, $staffId, $search);
         $filename = 'staff-work-summary-' . now()->format('YmdHis') . '.csv';
 
         $headers = [
@@ -90,13 +94,29 @@ class AdminStaffReportController extends Controller
         [$from, $to, $userId] = $this->performanceFilters($request);
         $users = User::orderBy('name')->get();
         $audit = $this->buildPerformanceAudit($from, $to, $userId);
+        $search = trim((string) $request->query('search', ''));
+        $allRows = collect($audit['rows'])
+            ->when($search !== '', fn ($rows) => $rows->filter(fn ($row) =>
+                str_contains(strtolower($row['date_label'].' '.$row['user_name']), strtolower($search))
+            ))
+            ->values();
+        $perPage = 20;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $rows = new LengthAwarePaginator(
+            $allRows->forPage($currentPage, $perPage)->values(),
+            $allRows->count(),
+            $perPage,
+            $currentPage,
+            ['path' => LengthAwarePaginator::resolveCurrentPath(), 'query' => $request->query()]
+        );
 
         return view('admin.staff-reports.performance', [
             'users' => $users,
             'from' => $from,
             'to' => $to,
             'userId' => $userId,
-            'rows' => $audit['rows'],
+            'rows' => $rows,
+            'search' => $search,
             'userSummary' => $audit['userSummary'],
             'chartLabels' => $audit['chartLabels'],
             'chartNetRevenue' => $audit['chartNetRevenue'],
@@ -155,7 +175,7 @@ class AdminStaffReportController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    private function baseQuery(?string $from, ?string $to, ?string $staffId)
+    private function baseQuery(?string $from, ?string $to, ?string $staffId, ?string $search = null)
     {
         return BillResult::with([
                 'bill',
@@ -185,12 +205,21 @@ class AdminStaffReportController extends Controller
                         ->orWhere('reported_by', $staffId)
                         ->orWhere('staff_id', $staffId);
                 });
+            })
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($searchQuery) use ($search) {
+                    $searchQuery->whereHas('bill', fn ($bill) => $bill->where('bill_no', 'like', "%{$search}%")
+                        ->orWhere('patient_name', 'like', "%{$search}%"))
+                        ->orWhereHas('billItem.service', fn ($service) => $service->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('performer', fn ($performer) => $performer->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('reporter', fn ($reporter) => $reporter->where('name', 'like', "%{$search}%"));
+                });
             });
     }
 
-    private function buildSummary(?string $from, ?string $to, ?string $staffId)
+    private function buildSummary(?string $from, ?string $to, ?string $staffId, ?string $search = null)
     {
-        return $this->baseQuery($from, $to, $staffId)
+        return $this->baseQuery($from, $to, $staffId, $search)
             ->get()
             ->flatMap(function (BillResult $result) {
                 $rows = collect();

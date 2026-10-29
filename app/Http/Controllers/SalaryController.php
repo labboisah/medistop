@@ -24,7 +24,16 @@ class SalaryController extends Controller
             ->where('user_id', $selectedUserId)
             ->first();
 
+        $search = trim((string) $request->query('search', ''));
+        $from = $request->query('from', '');
+        $to = $request->query('to', '');
         $salaryPayments = SalaryPayment::with('user')
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('note', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%"));
+            }))
+            ->when($from !== '', fn ($query) => $query->whereDate('salary_month', '>=', $from))
+            ->when($to !== '', fn ($query) => $query->whereDate('salary_month', '<=', $to))
             ->latest('salary_month')
             ->paginate(15)
             ->withQueryString();
@@ -42,7 +51,10 @@ class SalaryController extends Controller
             'yearPaid',
             'totalPaid',
             'users',
-            'selectedUserId'
+            'selectedUserId',
+            'search',
+            'from',
+            'to'
         ));
     }
 

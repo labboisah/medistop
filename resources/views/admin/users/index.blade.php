@@ -13,6 +13,8 @@
     </a>
 </div>
 
+@include('components.table-filters', ['routeName' => 'admin.users.index', 'searchPlaceholder' => 'Search name, email, role, or designation...'])
+
 <div class="bg-white rounded-xl shadow p-6">
 
     <table class="w-full text-left text-sm">
@@ -52,9 +54,7 @@
         </tbody>
     </table>
 
-    <div class="mt-6">
-        {{ $users->links() }}
-    </div>
+    @include('components.table-pagination', ['paginator' => $users])
 
 </div>
 

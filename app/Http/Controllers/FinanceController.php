@@ -15,7 +15,7 @@ class FinanceController extends Controller
      * Display a listing of the resource.
      */
     
-    public function index()
+    public function index(Request $request)
     {
         $selectedMonth = request('month', now()->format('Y-m'));
         if (! preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
@@ -74,7 +74,19 @@ class FinanceController extends Controller
         $users = User::where('role', 'user')->orderBy('name')->get();
         $monthTotalOutflow = $monthExpenses + $monthSalaryPaid;
         $monthProfit = $monthAnnexShare - $monthTotalOutflow;
-        $salaryPayments = SalaryPayment::with('user')->latest('salary_month')->paginate(12)->withQueryString();
+        $search = trim((string) $request->query('search', ''));
+        $from = $request->query('from', '');
+        $to = $request->query('to', '');
+        $salaryPayments = SalaryPayment::with('user')
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('note', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$search}%"));
+            }))
+            ->when($from !== '', fn ($query) => $query->whereDate('salary_month', '>=', $from))
+            ->when($to !== '', fn ($query) => $query->whereDate('salary_month', '<=', $to))
+            ->latest('salary_month')
+            ->paginate(12)
+            ->withQueryString();
 
         $report = auth()->user()->finance();
         return view('admin.finances.index', compact(
@@ -99,7 +111,10 @@ class FinanceController extends Controller
             'salaryPayment',
             'salaryPayments',
             'users',
-            'selectedUserId'
+            'selectedUserId',
+            'search',
+            'from',
+            'to'
         ));
 
     }

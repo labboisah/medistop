@@ -12,15 +12,19 @@
 </div>
 
 <form method="GET" action="{{ route('investigation-bookings.index') }}" class="mb-5 flex flex-wrap items-end gap-3 rounded-2xl bg-white p-5 shadow">
+    <div class="min-w-64 flex-1">
+        <label for="booking-search" class="mb-1 block text-sm font-medium text-gray-700">Search</label>
+        <input id="booking-search" name="search" type="search" value="{{ $search }}" placeholder="Reference, patient, phone, or investigation" oninput="clearTimeout(this._filterTimer); this._filterTimer = setTimeout(() => this.form.requestSubmit(), 400)" class="w-full rounded-lg border-gray-300 px-3 py-2 focus:border-accent focus:ring-accent">
+    </div>
     <div>
         <label for="from" class="mb-1 block text-sm font-medium text-gray-700">From</label>
-        <input id="from" name="from" type="date" value="{{ $from }}" class="rounded-lg border-gray-300 px-3 py-2 focus:border-accent focus:ring-accent">
+        <input id="from" name="from" type="date" value="{{ $from }}" onchange="this.form.requestSubmit()" class="rounded-lg border-gray-300 px-3 py-2 focus:border-accent focus:ring-accent">
     </div>
     <div>
         <label for="to" class="mb-1 block text-sm font-medium text-gray-700">To</label>
-        <input id="to" name="to" type="date" value="{{ $to }}" min="{{ $from }}" class="rounded-lg border-gray-300 px-3 py-2 focus:border-accent focus:ring-accent">
+        <input id="to" name="to" type="date" value="{{ $to }}" min="{{ $from }}" onchange="this.form.requestSubmit()" class="rounded-lg border-gray-300 px-3 py-2 focus:border-accent focus:ring-accent">
     </div>
-    <button type="submit" class="rounded-lg bg-primary px-5 py-2 font-semibold text-white hover:bg-secondary">Filter</button>
+    <button type="submit" class="rounded-lg bg-primary px-5 py-2 font-semibold text-white hover:bg-secondary">Apply filters</button>
     @if($from || $to)
         <a href="{{ route('investigation-bookings.index') }}" class="px-3 py-2 text-sm font-semibold text-gray-600 hover:text-primary">Clear dates</a>
     @endif
@@ -75,6 +79,6 @@
             @endforelse
         </tbody>
     </table>
-    <div class="mt-5">{{ $bookings->links() }}</div>
+    @include('components.table-pagination', ['paginator' => $bookings])
 </div>
 @endsection

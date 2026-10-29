@@ -80,6 +80,8 @@
     <div class="bg-white p-6 rounded-2xl shadow lg:col-span-2 overflow-x-auto">
         <h2 class="text-xl font-bold text-primary mb-5">Salary Records</h2>
 
+        @include('components.table-filters', ['routeName' => 'admin.salaries.index', 'searchPlaceholder' => 'Search note or staff member...'])
+
         <table class="w-full text-sm">
             <thead class="border-b bg-lightbg">
                 <tr>
@@ -116,9 +118,7 @@
             </tbody>
         </table>
 
-        <div class="mt-6">
-            {{ $salaryPayments->links() }}
-        </div>
+        @include('components.table-pagination', ['paginator' => $salaryPayments])
     </div>
 </div>
 @endsection

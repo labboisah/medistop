@@ -11,6 +11,8 @@
     </a>
 </div>
 
+@include('components.table-filters', ['routeName' => 'admin.categories.index', 'searchPlaceholder' => 'Search categories...'])
+
 <div class="bg-white rounded-xl shadow p-6">
 
     <table class="w-full text-left">
@@ -27,7 +29,7 @@
             @foreach($categories as $category)
                 <tr class="border-b hover:bg-lightbg">
                     <td class="py-3 font-medium">{{ $category->name }}</td>
-                    <td>{{ $category->services->count() }}</td>
+                    <td>{{ $category->services_count }}</td>
                     <td class="text-xs">
                         @if($category->revenueRule)
                             <div class="bg-blue-50 p-2 rounded inline-block">
@@ -60,6 +62,8 @@
             @endforeach
         </tbody>
     </table>
+
+    @include('components.table-pagination', ['paginator' => $categories])
 
 </div>
 

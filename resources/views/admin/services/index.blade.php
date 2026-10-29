@@ -14,6 +14,8 @@
     </a>
 </div>
 
+@include('components.table-filters', ['routeName' => 'admin.services.index', 'searchPlaceholder' => 'Search services or categories...'])
+
 <div class="bg-white rounded-2xl shadow p-6 overflow-x-auto">
 
     <table class="w-full text-left text-sm">
@@ -71,6 +73,8 @@
         </tbody>
 
     </table>
+
+    @include('components.table-pagination', ['paginator' => $services])
 
 </div>
 

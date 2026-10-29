@@ -80,10 +80,12 @@ class PublicInvestigationBookingController extends Controller
     public function index(Request $request)
     {
         $filters = $request->validate([
+            'search' => 'nullable|string|max:255',
             'from' => 'nullable|date',
             'to' => 'nullable|date',
         ]);
 
+        $search = trim($filters['search'] ?? '');
         $from = $filters['from'] ?? null;
         $to = $filters['to'] ?? null;
         if ($from && $to && $to < $from) {
@@ -102,6 +104,13 @@ class PublicInvestigationBookingController extends Controller
         };
 
         $bookings = $applyDateFilters(InvestigationBooking::query())
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('reference', 'like', "%{$search}%")
+                    ->orWhere('patient_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhereHas('items.service', fn ($service) => $service->where('name', 'like', "%{$search}%"));
+            }))
             ->with('items.service', 'acceptedBy')
             ->latest()
             ->paginate(20)
@@ -114,7 +123,7 @@ class PublicInvestigationBookingController extends Controller
             'accepted' => (clone $statsQuery)->where('status', 'accepted')->count(),
         ];
 
-        return view('investigation-bookings.index', compact('bookings', 'stats', 'from', 'to'));
+        return view('investigation-bookings.index', compact('bookings', 'stats', 'from', 'to', 'search'));
     }
 
     public function show(InvestigationBooking $booking)

@@ -116,6 +116,8 @@
         </div>
     @endif
 
+    @include('components.table-filters', ['routeName' => 'admin.reports.index', 'searchPlaceholder' => 'Search report reference or creator...'])
+
     <div class="bg-white rounded-2xl shadow p-6 overflow-x-auto">
         <table class="w-full text-left text-sm">
             <thead class="border-b">
@@ -154,9 +156,7 @@
             </tbody>
         </table>
 
-        <div class="mt-4">
-            {{ $reports->links() }}
-        </div>
+        @include('components.table-pagination', ['paginator' => $reports])
     </div>
 </div>
 

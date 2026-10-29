@@ -16,7 +16,11 @@
         </a>
     </div>
 
-    <form method="GET" action="{{ route('admin.staff-performance.index') }}" class="grid md:grid-cols-4 gap-4 items-end">
+    <form method="GET" action="{{ route('admin.staff-performance.index') }}" class="grid md:grid-cols-5 gap-4 items-end">
+        <div class="md:col-span-2">
+            <label class="block text-sm font-medium mb-2">Search Daily Breakdown</label>
+            <input type="search" name="search" value="{{ $search }}" placeholder="Date or user" oninput="clearTimeout(this._filterTimer); this._filterTimer = setTimeout(() => this.form.requestSubmit(), 400)" class="w-full px-4 py-3 border rounded-xl">
+        </div>
         <div>
             <label class="block text-sm font-medium mb-2">From Date</label>
             <input type="date" name="from" value="{{ $from }}"
@@ -46,9 +50,9 @@
             <a href="{{ route('admin.staff-performance.index') }}" class="bg-gray-200 text-primary px-6 py-3 rounded-xl">Reset</a>
         </div>
 
-        @error('from')<p class="text-red-600 text-sm md:col-span-4">{{ $message }}</p>@enderror
-        @error('to')<p class="text-red-600 text-sm md:col-span-4">{{ $message }}</p>@enderror
-        @error('user_id')<p class="text-red-600 text-sm md:col-span-4">{{ $message }}</p>@enderror
+        @error('from')<p class="text-red-600 text-sm md:col-span-5">{{ $message }}</p>@enderror
+        @error('to')<p class="text-red-600 text-sm md:col-span-5">{{ $message }}</p>@enderror
+        @error('user_id')<p class="text-red-600 text-sm md:col-span-5">{{ $message }}</p>@enderror
     </form>
 </div>
 
@@ -200,6 +204,7 @@
             @endforelse
         </tbody>
     </table>
+    @include('components.table-pagination', ['paginator' => $rows])
 </div>
 @endsection
 

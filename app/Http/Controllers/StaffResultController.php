@@ -56,17 +56,33 @@ class StaffResultController extends Controller
         ));
     }
 
-    public function index()
+    public function index(Request $request)
     {
         if ((auth()->user()->staff_type ?? 'staff') === 'radiologist') {
+            $filters = $request->validate([
+                'search' => 'nullable|string|max:255',
+                'from' => 'nullable|date',
+                'to' => 'nullable|date',
+            ]);
+            $search = trim($filters['search'] ?? '');
+            $from = $filters['from'] ?? '';
+            $to = $filters['to'] ?? '';
             $studies = BillResult::with(['bill', 'billItem.service', 'performer', 'images'])
                 ->where('radiologist_id', auth()->id())
                 ->whereNull('reported_at')
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                    $query->whereHas('bill', fn ($bill) => $bill->where('patient_name', 'like', "%{$search}%")
+                        ->orWhere('bill_no', 'like', "%{$search}%"))
+                        ->orWhereHas('billItem.service', fn ($service) => $service->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('performer', fn ($performer) => $performer->where('name', 'like', "%{$search}%"));
+                }))
+                ->when($from !== '', fn ($query) => $query->whereDate('performed_at', '>=', $from))
+                ->when($to !== '', fn ($query) => $query->whereDate('performed_at', '<=', $to))
                 ->latest('performed_at')
                 ->paginate(20)
                 ->withQueryString();
 
-            return view('staff.results.worklist', compact('studies'));
+            return view('staff.results.worklist', compact('studies', 'search', 'from', 'to'));
         }
 
         return view('staff.results.index');
@@ -305,24 +321,33 @@ class StaffResultController extends Controller
     public function reports(Request $request)
     {
         [$from, $to] = $this->dateRange($request);
+        $search = trim((string) $request->query('search', ''));
         $dateColumn = $this->activityDateColumn();
 
         $results = $this->activityQuery()
             ->with('bill', 'billItem.service', 'performer', 'reporter', 'staff')
             ->when($from, fn ($query) => $query->whereDate($dateColumn, '>=', $from))
             ->when($to, fn ($query) => $query->whereDate($dateColumn, '<=', $to))
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->whereHas('bill', fn ($bill) => $bill->where('bill_no', 'like', "%{$search}%")
+                    ->orWhere('patient_name', 'like', "%{$search}%"))
+                    ->orWhereHas('billItem.service', fn ($service) => $service->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('performer', fn ($performer) => $performer->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('reporter', fn ($reporter) => $reporter->where('name', 'like', "%{$search}%"));
+            }))
             ->latest($dateColumn)
             ->paginate(15)
             ->withQueryString();
 
         $staffType = auth()->user()->staff_type ?? 'staff';
 
-        return view('staff.results.reports', compact('results', 'from', 'to', 'staffType'));
+        return view('staff.results.reports', compact('results', 'from', 'to', 'staffType', 'search'));
     }
 
     public function commission(Request $request)
     {
         [$from, $to] = $this->dateRange($request);
+        $search = trim((string) $request->query('search', ''));
         $commissionColumn = $this->commissionColumn();
         $dateColumn = $this->activityDateColumn();
         $staffType = auth()->user()->staff_type ?? 'staff';
@@ -335,6 +360,11 @@ class StaffResultController extends Controller
             ])
             ->when($from, fn ($query) => $query->whereDate($dateColumn, '>=', $from))
             ->when($to, fn ($query) => $query->whereDate($dateColumn, '<=', $to))
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->whereHas('bill', fn ($bill) => $bill->where('bill_no', 'like', "%{$search}%")
+                    ->orWhere('patient_name', 'like', "%{$search}%"))
+                    ->orWhereHas('billItem.service', fn ($service) => $service->where('name', 'like', "%{$search}%"));
+            }))
             ->with('bill', 'billItem.service')
             ->latest($dateColumn)
             ->paginate(15)
@@ -352,11 +382,21 @@ class StaffResultController extends Controller
         $filteredCommission = $this->commissionQuery()
             ->when($from, fn ($query) => $query->whereDate($dateColumn, '>=', $from))
             ->when($to, fn ($query) => $query->whereDate($dateColumn, '<=', $to))
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->whereHas('bill', fn ($bill) => $bill->where('bill_no', 'like', "%{$search}%")
+                    ->orWhere('patient_name', 'like', "%{$search}%"))
+                    ->orWhereHas('billItem.service', fn ($service) => $service->where('name', 'like', "%{$search}%"));
+            }))
             ->sum($commissionColumn);
 
         $filteredBillAmount = $this->commissionQuery()
             ->when($from, fn ($query) => $query->whereDate($dateColumn, '>=', $from))
             ->when($to, fn ($query) => $query->whereDate($dateColumn, '<=', $to))
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->whereHas('bill', fn ($bill) => $bill->where('bill_no', 'like', "%{$search}%")
+                    ->orWhere('patient_name', 'like', "%{$search}%"))
+                    ->orWhereHas('billItem.service', fn ($service) => $service->where('name', 'like', "%{$search}%"));
+            }))
             ->sum('bill_items.price');
 
         return view('staff.results.commission', compact(
@@ -367,7 +407,8 @@ class StaffResultController extends Controller
             'filteredBillAmount',
             'from',
             'to',
-            'staffType'
+            'staffType',
+            'search'
         ));
     }
 

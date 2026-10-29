@@ -16,6 +16,8 @@
         </a>
     </div>
 
+    @include('components.table-filters', ['routeName' => 'refunds.index', 'searchPlaceholder' => 'Search bill, patient, or refund reason...'])
+
     <div class="bg-white p-6 rounded-2xl shadow overflow-x-auto">
         <table class="w-full text-left text-sm">
             <thead class="bg-lightbg">
@@ -65,9 +67,7 @@
         </table>
     </div>
 
-    <div>
-        {{ $refunds->links() }}
-    </div>
+    @include('components.table-pagination', ['paginator' => $refunds])
 </div>
 
 @endsection
