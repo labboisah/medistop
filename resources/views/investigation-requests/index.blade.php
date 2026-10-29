@@ -106,12 +106,30 @@
             </table>
         </div>
 
-        @if($items->hasPages())
-            <div class="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
-                <p class="text-sm text-gray-600 dark:text-gray-300">Showing {{ $items->firstItem() }}–{{ $items->lastItem() }} of {{ $items->total() }} investigations</p>
-                <div>{{ $items->links() }}</div>
+        <div class="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
+            <p class="text-sm text-gray-600 dark:text-gray-300">Showing {{ $items->firstItem() ?? 0 }}–{{ $items->lastItem() ?? 0 }} of {{ $items->total() }} investigations</p>
+            <nav aria-label="Investigation pagination" class="flex items-center gap-1">
+                @if($items->onFirstPage())
+                    <span aria-disabled="true" class="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-400 dark:border-gray-600">Previous</span>
+                @else
+                    <a rel="prev" href="{{ $items->previousPageUrl() }}" class="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">Previous</a>
+                @endif
+
+                @for($page = 1; $page <= max(1, $items->lastPage()); $page++)
+                    @if($page === $items->currentPage())
+                        <span aria-current="page" class="rounded border border-accent bg-accent px-3 py-1.5 text-sm font-semibold text-white">{{ $page }}</span>
+                    @else
+                        <a href="{{ $items->url($page) }}" class="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">{{ $page }}</a>
+                    @endif
+                @endfor
+
+                @if($items->hasMorePages())
+                    <a rel="next" href="{{ $items->nextPageUrl() }}" class="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">Next</a>
+                @else
+                    <span aria-disabled="true" class="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-400 dark:border-gray-600">Next</span>
+                @endif
+            </nav>
             </div>
-        @endif
 
     </section>
 </div>

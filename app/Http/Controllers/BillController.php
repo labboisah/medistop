@@ -56,7 +56,7 @@ class BillController extends Controller
                 });
             })
             ->latest()
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
 
         return view('investigation-requests.index', compact('items', 'search', 'dateFrom', 'dateTo'));
