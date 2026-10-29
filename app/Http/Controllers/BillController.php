@@ -83,15 +83,25 @@ class BillController extends Controller
             'less_than_year' => 'nullable|boolean',
             'age_years' => 'nullable|integer|min:0|max:150',
             'age_months' => 'nullable|integer|min:0|max:11',
+            'discount' => 'nullable|numeric|min:0',
             'services' => 'required|array',
-            'services.*' => 'exists:services,id',
+            'services.*' => 'required|integer|distinct|exists:services,id',
         ]);
 
-        $billNo = $this->generateBillNo();
+        $services = Service::with('category.revenueRule')
+            ->whereIn('id', $request->services)
+            ->get()
+            ->keyBy('id');
+        $totalAmount = (float) $services->sum('price');
+        $discount = (float) ($request->input('discount') ?? 0);
 
-        $totalAmount = 0;
-        $totalStaffShare = 0;
-        $totalAnnexShare = 0;
+        if (round($discount, 2) > round($totalAmount, 2)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'discount' => 'Discount cannot be greater than the investigations subtotal.',
+            ]);
+        }
+
+        $billNo = $this->generateBillNo();
 
         $bill = Bill::create([
             'bill_no' => $billNo,
@@ -102,24 +112,15 @@ class BillController extends Controller
         ]);
 
         foreach ($request->services as $serviceId) {
-
-            $service = \App\Models\Service::find($serviceId);
+            $service = $services->get($serviceId);
 
             $price = $service->price;
-            $rule = $service->category->revenueRule;
-            $staffShare = $price * ($rule->staff_percent / 100);
-            $annexShare = $price * ($rule->annex_percent / 100);
             $shares = RevenueCalculator::calculate($service, $price);
             $billItem = BillItem::create([
                 'bill_id' => $bill->id,
                 'service_id' => $service->id,
                 'price' => $price,
             ]);
-
-            $totalAmount += $price;
-            $totalStaffShare += $staffShare;
-            $totalAnnexShare += $annexShare;
-
             $billItem->revenueDistribution()->create([
                 'radiologist_amount' => $shares['radiologist'],
                 'radiographer_amount' => $shares['radiographer'],
@@ -128,7 +129,6 @@ class BillController extends Controller
             ]);
         }
 
-        $discount = $request->discount ?? 0;
         $finalAmount = $totalAmount - $discount;
 
         $bill->update([

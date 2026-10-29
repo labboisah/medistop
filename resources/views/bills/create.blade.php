@@ -59,8 +59,10 @@
 </div>  
 <div class="mb-6">
     <label class="block text-sm mb-2 font-medium">Discount (NGN)</label>
-    <input type="number" step="0.01" name="discount"
+    <input id="billDiscount" type="number" min="0" step="0.01" name="discount" value="{{ old('discount', '0') }}"
            class="w-full px-4 py-3 border rounded-xl">
+    @error('discount')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+    <p id="billDiscountWarning" class="mt-2 hidden text-sm text-red-600">Discount cannot be greater than the investigations subtotal.</p>
 </div>
 
 <!-- SERVICE SELECT -->
@@ -84,9 +86,10 @@
     <h2 id="billSelectedServicesTitle" class="font-semibold text-primary">Selected investigations</h2>
     <div id="billSelectedServices" class="mt-3 space-y-2"></div>
     <p id="billNoSelectedServices" class="mt-2 text-sm text-gray-500">No investigations selected yet.</p>
-    <div class="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 font-bold">
-        <span>Total amount</span>
-        <span id="billTotalAmount">NGN 0.00</span>
+    <div class="mt-4 space-y-2 border-t border-gray-200 pt-3 text-sm">
+        <div class="flex items-center justify-between"><span>Subtotal</span><span id="billSubtotal">NGN 0.00</span></div>
+        <div class="flex items-center justify-between"><span>Discount</span><span id="billDiscountAmount">−NGN 0.00</span></div>
+        <div class="flex items-center justify-between border-t border-gray-200 pt-2 text-base font-bold"><span>Amount due</span><span id="billTotalAmount">NGN 0.00</span></div>
     </div>
 </section>
 <div id="billSelectedServiceInputs"></div>
@@ -138,6 +141,10 @@ syncAgeInputs();
     const selectedList = document.getElementById('billSelectedServices');
     const selectedInputs = document.getElementById('billSelectedServiceInputs');
     const emptyMessage = document.getElementById('billNoSelectedServices');
+    const discountInput = document.getElementById('billDiscount');
+    const discountWarning = document.getElementById('billDiscountWarning');
+    const subtotalDisplay = document.getElementById('billSubtotal');
+    const discountDisplay = document.getElementById('billDiscountAmount');
     const totalDisplay = document.getElementById('billTotalAmount');
     const formatAmount = amount => `NGN ${Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     let selected = services.filter(service => initialIds.includes(Number(service.id)));
@@ -228,10 +235,17 @@ syncAgeInputs();
         });
 
         emptyMessage.style.display = selected.length ? 'none' : 'block';
-        totalDisplay.textContent = formatAmount(total);
+        const discount = Number(discountInput.value) || 0;
+        const discountExceedsSubtotal = discount > total;
+        subtotalDisplay.textContent = formatAmount(total);
+        discountDisplay.textContent = `−${formatAmount(discount)}`;
+        totalDisplay.textContent = formatAmount(Math.max(0, total - discount));
+        discountWarning.style.display = discountExceedsSubtotal ? 'block' : 'none';
+        discountInput.setCustomValidity(discountExceedsSubtotal ? 'Discount cannot be greater than the investigations subtotal.' : '');
     }
 
     search.addEventListener('input', renderResults);
+    discountInput.addEventListener('input', renderSelected);
     search.addEventListener('keydown', event => {
         if (event.key === 'Enter') {
             const firstOption = results.querySelector('[role="option"]');
