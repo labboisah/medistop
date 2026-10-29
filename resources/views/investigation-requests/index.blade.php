@@ -18,21 +18,28 @@
                 <h3 class="font-semibold text-primary dark:text-white">Registered investigations</h3>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Search and track investigation progress.</p>
             </div>
-            <a href="{{ route('investigation-requests.create') }}" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14" />
-                </svg>
-                New Investigation
+            <a href="{{ route('investigation-requests.create') }}" class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent px-5 py-2 text-white shadow transition hover:bg-green-600">
+                <span aria-hidden="true">+</span> New Investigation
             </a>
         </div>
         <div class="border-b border-gray-200 p-4 dark:border-gray-700">
-            <label for="investigation-search" class="sr-only">Search investigations</label>
-            <div class="relative max-w-xl">
-                <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="11" cy="11" r="7" stroke-width="2" />
-                    <path stroke-linecap="round" stroke-width="2" d="m20 20-4-4" />
-                </svg>
-                <input id="investigation-search" type="search" placeholder="Search by patient, bill number, or investigation..." class="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div class="relative md:col-span-2">
+                    <label for="investigation-search" class="sr-only">Search investigations</label>
+                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7" stroke-width="2" />
+                        <path stroke-linecap="round" stroke-width="2" d="m20 20-4-4" />
+                    </svg>
+                    <input id="investigation-search" type="search" placeholder="Search by patient, bill number, or investigation..." class="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
+                </div>
+                <div>
+                    <label for="investigation-date-from" class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">From date</label>
+                    <input id="investigation-date-from" type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
+                </div>
+                <div>
+                    <label for="investigation-date-to" class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">To date</label>
+                    <input id="investigation-date-to" type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
+                </div>
             </div>
         </div>
 
@@ -72,7 +79,7 @@
 
                             $paymentLabel = ucfirst(str_replace('_', ' ', $bill->payment_status ?? 'unpaid'));
                         @endphp
-                        <tr data-investigation-row class="text-gray-700 dark:text-gray-200">
+                        <tr data-investigation-row data-date="{{ $bill->created_at?->format('Y-m-d') }}" class="text-gray-700 dark:text-gray-200">
                             <td class="whitespace-nowrap px-5 py-4">
                                 <div class="font-semibold text-primary dark:text-white">{{ $bill->patient_name ?: 'Unnamed patient' }}</div>
                                 <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ $bill->bill_no }}</div>
@@ -109,17 +116,25 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const searchInput = document.getElementById('investigation-search');
+        const dateFromInput = document.getElementById('investigation-date-from');
+        const dateToInput = document.getElementById('investigation-date-to');
         const rows = Array.from(document.querySelectorAll('[data-investigation-row]'));
         const emptyState = document.querySelector('[data-empty-state]');
 
         if (!searchInput) return;
 
-        searchInput.addEventListener('input', () => {
+        const filterRows = () => {
             const query = searchInput.value.trim().toLocaleLowerCase();
+            const dateFrom = dateFromInput?.value ?? '';
+            const dateTo = dateToInput?.value ?? '';
+            const hasFilters = query.length > 0 || dateFrom !== '' || dateTo !== '';
             let visibleCount = 0;
 
             rows.forEach((row) => {
-                const matches = row.textContent.toLocaleLowerCase().includes(query);
+                const date = row.dataset.date ?? '';
+                const matches = row.textContent.toLocaleLowerCase().includes(query)
+                    && (!dateFrom || date >= dateFrom)
+                    && (!dateTo || date <= dateTo);
                 row.hidden = !matches;
                 if (matches) visibleCount++;
             });
@@ -128,17 +143,21 @@
                 emptyState.hidden = rows.length > 0;
             } else {
                 const existingSearchEmpty = document.querySelector('[data-search-empty]');
-                if (visibleCount === 0 && query.length > 0 && !existingSearchEmpty) {
+                if (visibleCount === 0 && hasFilters && !existingSearchEmpty) {
                     const tbody = document.querySelector('tbody');
                     const row = document.createElement('tr');
                     row.dataset.searchEmpty = '';
                     row.innerHTML = '<td colspan="6" class="px-5 py-12 text-center text-gray-500 dark:text-gray-300"><p class="font-semibold">No matching investigations found.</p></td>';
                     tbody?.appendChild(row);
-                } else if (visibleCount > 0 || query.length === 0) {
+                } else if (visibleCount > 0 || !hasFilters) {
                     existingSearchEmpty?.remove();
                 }
             }
-        });
+        };
+
+        searchInput.addEventListener('input', filterRows);
+        dateFromInput?.addEventListener('input', filterRows);
+        dateToInput?.addEventListener('input', filterRows);
     });
 </script>
 @endsection
