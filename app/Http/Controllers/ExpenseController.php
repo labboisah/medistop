@@ -10,7 +10,7 @@ class ExpenseController extends Controller
 {
     public function index()
     {
-        $expenses = Expense::latest()->paginate(15);
+        $expenses = Expense::latest()->paginate(15)->withQueryString();
 
         $todayTotal = Expense::whereDate('expense_date', today())
             ->sum('amount');

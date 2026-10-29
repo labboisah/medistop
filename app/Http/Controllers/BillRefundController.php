@@ -24,7 +24,8 @@ class BillRefundController extends Controller
         $refunds = BillRefund::with('bill')
             ->where('user_id', auth()->id())
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
         return view('refunds.index', compact('refunds'));
     }

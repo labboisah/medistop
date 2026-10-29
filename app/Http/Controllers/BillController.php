@@ -16,24 +16,50 @@ class BillController extends Controller
      */
     public function index()
     {
-        $bills = \App\Models\Bill::withCount('results')->latest()->paginate(15);
+        $bills = \App\Models\Bill::withCount('results')->latest()->paginate(15)->withQueryString();
 
         return view('bills.index', compact('bills'));
     }
 
-    public function requestIndex()
+    public function requestIndex(Request $request)
     {
+        $filters = $request->validate([
+            'q' => 'nullable|string|max:255',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date',
+        ]);
+        $search = trim($filters['q'] ?? '');
+        $dateFrom = $filters['date_from'] ?? '';
+        $dateTo = $filters['date_to'] ?? '';
+
         $items = BillItem::query()
             ->with(['bill.user', 'service', 'result.images'])
-            ->whereHas('bill', function ($query) {
+            ->whereHas('bill', function ($query) use ($dateFrom, $dateTo) {
                 if (auth()->user()->role === 'staff') {
                     $query->where('user_id', auth()->id());
                 }
+                if ($dateFrom !== '') {
+                    $query->whereDate('created_at', '>=', $dateFrom);
+                }
+                if ($dateTo !== '') {
+                    $query->whereDate('created_at', '<=', $dateTo);
+                }
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->whereHas('bill', function ($billQuery) use ($search) {
+                        $billQuery->where('bill_no', 'like', "%{$search}%")
+                            ->orWhere('patient_name', 'like', "%{$search}%");
+                    })->orWhereHas('service', function ($serviceQuery) use ($search) {
+                        $serviceQuery->where('name', 'like', "%{$search}%");
+                    });
+                });
             })
             ->latest()
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('investigation-requests.index', compact('items'));
+        return view('investigation-requests.index', compact('items', 'search', 'dateFrom', 'dateTo'));
     }
 
     /**

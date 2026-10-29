@@ -26,7 +26,8 @@ class SalaryController extends Controller
 
         $salaryPayments = SalaryPayment::with('user')
             ->latest('salary_month')
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
         $totalPaid = SalaryPayment::sum('amount');
         $yearPaid = SalaryPayment::whereYear('salary_month', $monthStart->year)->sum('amount');

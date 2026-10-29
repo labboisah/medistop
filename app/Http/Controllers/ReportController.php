@@ -28,7 +28,7 @@ class ReportController extends Controller
 
     public function index()
     {
-        $reports = Report::with('user')->latest()->paginate(20);
+        $reports = Report::with('user')->latest()->paginate(20)->withQueryString();
 
         $stats = Report::selectRaw(
             'COUNT(*) as total_reports, '
@@ -62,7 +62,7 @@ class ReportController extends Controller
 
         $selectedUserId = $request->user_id;
 
-        $reports = Report::with('user')->latest()->paginate(20);
+        $reports = Report::with('user')->latest()->paginate(20)->withQueryString();
 
         $stats = Report::selectRaw(
             'COUNT(*) as total_reports, '

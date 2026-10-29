@@ -63,7 +63,8 @@ class StaffResultController extends Controller
                 ->where('radiologist_id', auth()->id())
                 ->whereNull('reported_at')
                 ->latest('performed_at')
-                ->paginate(20);
+                ->paginate(20)
+                ->withQueryString();
 
             return view('staff.results.worklist', compact('studies'));
         }

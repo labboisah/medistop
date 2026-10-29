@@ -16,7 +16,7 @@
     </div>
 
     <section class="overflow-hidden rounded-xl bg-white shadow dark:bg-secondary">
-        <div class="border-b border-gray-200 p-4 dark:border-gray-700">
+        <form id="investigation-filters" method="GET" action="{{ route('investigation-requests.index') }}" class="border-b border-gray-200 p-4 dark:border-gray-700">
             <div class="flex items-end gap-3 overflow-x-auto" style="display:flex; flex-direction:row; flex-wrap:nowrap; align-items:flex-end; gap:.75rem; overflow-x:auto;">
                 <div class="relative min-w-0 flex-1" style="flex:1 1 auto; min-width:16rem;">
                     <label for="investigation-search" class="sr-only">Search investigations</label>
@@ -24,18 +24,18 @@
                         <circle cx="11" cy="11" r="7" stroke-width="2" />
                         <path stroke-linecap="round" stroke-width="2" d="m20 20-4-4" />
                     </svg>
-                    <input id="investigation-search" type="search" placeholder="Search by patient, bill number, or investigation..." class="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
+                    <input id="investigation-search" name="q" type="search" value="{{ $search }}" placeholder="Search by patient, bill number, or investigation..." class="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
                 </div>
                 <div class="shrink-0" style="flex:0 0 11rem;">
                     <label for="investigation-date-from" class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">From date</label>
-                    <input id="investigation-date-from" type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
+                    <input id="investigation-date-from" name="date_from" type="date" value="{{ $dateFrom }}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
                 </div>
                 <div class="shrink-0" style="flex:0 0 11rem;">
                     <label for="investigation-date-to" class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">To date</label>
-                    <input id="investigation-date-to" type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
+                    <input id="investigation-date-to" name="date_to" type="date" value="{{ $dateTo }}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 dark:border-gray-600 dark:bg-primary dark:text-white">
                 </div>
             </div>
-        </div>
+        </form>
 
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-700">
@@ -92,15 +92,26 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" data-empty-state class="px-5 py-12 text-center text-gray-500 dark:text-gray-300">
-                                <p class="font-semibold">No investigation requests yet.</p>
-                                <p class="mt-1 text-sm">Select “New Investigation” to register the first request.</p>
+                            <td colspan="6" class="px-5 py-12 text-center text-gray-500 dark:text-gray-300">
+                                @if($search !== '' || $dateFrom !== '' || $dateTo !== '')
+                                    <p class="font-semibold">No matching investigations found.</p>
+                                @else
+                                    <p class="font-semibold">No investigation requests yet.</p>
+                                    <p class="mt-1 text-sm">Select “New Investigation” to register the first request.</p>
+                                @endif
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+
+        @if($items->hasPages())
+            <div class="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700">
+                <p class="text-sm text-gray-600 dark:text-gray-300">Showing {{ $items->firstItem() }}–{{ $items->lastItem() }} of {{ $items->total() }} investigations</p>
+                <div>{{ $items->links() }}</div>
+            </div>
+        @endif
 
     </section>
 </div>
@@ -109,49 +120,20 @@
 @section('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        const filterForm = document.getElementById('investigation-filters');
         const searchInput = document.getElementById('investigation-search');
         const dateFromInput = document.getElementById('investigation-date-from');
         const dateToInput = document.getElementById('investigation-date-to');
-        const rows = Array.from(document.querySelectorAll('[data-investigation-row]'));
-        const emptyState = document.querySelector('[data-empty-state]');
 
-        if (!searchInput) return;
+        if (!filterForm || !searchInput) return;
 
-        const filterRows = () => {
-            const query = searchInput.value.trim().toLocaleLowerCase();
-            const dateFrom = dateFromInput?.value ?? '';
-            const dateTo = dateToInput?.value ?? '';
-            const hasFilters = query.length > 0 || dateFrom !== '' || dateTo !== '';
-            let visibleCount = 0;
-
-            rows.forEach((row) => {
-                const date = row.dataset.date ?? '';
-                const matches = row.textContent.toLocaleLowerCase().includes(query)
-                    && (!dateFrom || date >= dateFrom)
-                    && (!dateTo || date <= dateTo);
-                row.hidden = !matches;
-                if (matches) visibleCount++;
-            });
-
-            if (emptyState) {
-                emptyState.hidden = rows.length > 0;
-            } else {
-                const existingSearchEmpty = document.querySelector('[data-search-empty]');
-                if (visibleCount === 0 && hasFilters && !existingSearchEmpty) {
-                    const tbody = document.querySelector('tbody');
-                    const row = document.createElement('tr');
-                    row.dataset.searchEmpty = '';
-                    row.innerHTML = '<td colspan="6" class="px-5 py-12 text-center text-gray-500 dark:text-gray-300"><p class="font-semibold">No matching investigations found.</p></td>';
-                    tbody?.appendChild(row);
-                } else if (visibleCount > 0 || !hasFilters) {
-                    existingSearchEmpty?.remove();
-                }
-            }
-        };
-
-        searchInput.addEventListener('input', filterRows);
-        dateFromInput?.addEventListener('input', filterRows);
-        dateToInput?.addEventListener('input', filterRows);
+        let searchTimer;
+        searchInput.addEventListener('input', () => {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(() => filterForm.requestSubmit(), 350);
+        });
+        dateFromInput?.addEventListener('change', () => filterForm.requestSubmit());
+        dateToInput?.addEventListener('change', () => filterForm.requestSubmit());
     });
 </script>
 @endsection

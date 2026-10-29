@@ -18,7 +18,8 @@ class PaymentController extends Controller
     {
         $payments = \App\Models\Payment::with('bill','user')
                         ->latest()
-                        ->paginate(15);
+                        ->paginate(15)
+                        ->withQueryString();
 
         return view('payments.index', compact('payments'));
     }

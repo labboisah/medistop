@@ -74,7 +74,7 @@ class FinanceController extends Controller
         $users = User::where('role', 'user')->orderBy('name')->get();
         $monthTotalOutflow = $monthExpenses + $monthSalaryPaid;
         $monthProfit = $monthAnnexShare - $monthTotalOutflow;
-        $salaryPayments = SalaryPayment::with('user')->latest('salary_month')->paginate(12);
+        $salaryPayments = SalaryPayment::with('user')->latest('salary_month')->paginate(12)->withQueryString();
 
         $report = auth()->user()->finance();
         return view('admin.finances.index', compact(
