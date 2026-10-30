@@ -60,6 +60,7 @@ class Bill extends Model
         $amount = 0;
 
         foreach($this->items as $item){
+            $item->setRelation('bill', $this);
             $shares = $item->shares();
             $annexShares += $shares['annex'];
             $radiographerShares += $shares['radiographer'];

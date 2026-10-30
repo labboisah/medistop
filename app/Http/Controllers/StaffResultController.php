@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bill;
+use App\Models\BillItem;
 use App\Models\BillResult;
 use App\Models\BillResultImage;
 use App\Models\ResultTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class StaffResultController extends Controller
 {
@@ -58,7 +60,56 @@ class StaffResultController extends Controller
 
     public function index(Request $request)
     {
-        if ((auth()->user()->staff_type ?? 'staff') === 'radiologist') {
+        $staffType = auth()->user()->staff_type ?? 'staff';
+        if ($staffType === 'radiographer') {
+            $filters = $request->validate([
+                'search' => 'nullable|string|max:255',
+                'from' => 'nullable|date',
+                'to' => 'nullable|date',
+                'status' => 'nullable|in:awaiting_upload,awaiting_report,report_ready',
+            ]);
+            $search = trim($filters['search'] ?? '');
+            $from = $filters['from'] ?? '';
+            $to = $filters['to'] ?? '';
+            $status = $filters['status'] ?? '';
+            $radiographerId = auth()->id();
+
+            $studies = BillItem::query()
+                ->with(['bill', 'service', 'result.images', 'result.assignedRadiologist'])
+                ->whereHas('bill', function ($bill) use ($from, $to) {
+                    $bill->where(function ($paid) {
+                        $paid->where('payment_status', 'paid')->orWhere('balance', '<=', 0);
+                    });
+                    if ($from !== '') {
+                        $bill->where('created_at', '>=', Carbon::parse($from)->startOfDay());
+                    }
+                    if ($to !== '') {
+                        $bill->where('created_at', '<', Carbon::parse($to)->addDay()->startOfDay());
+                    }
+                })
+                ->where(function ($query) use ($radiographerId) {
+                    $query->whereDoesntHave('result')
+                        ->orWhereHas('result', fn ($result) => $result->where('performed_by', $radiographerId));
+                })
+                ->when($status === 'awaiting_upload', fn ($query) => $query->whereDoesntHave('result'))
+                ->when($status === 'awaiting_report', fn ($query) => $query->whereHas('result', fn ($result) => $result
+                    ->where('performed_by', $radiographerId)->whereNull('reported_at')))
+                ->when($status === 'report_ready', fn ($query) => $query->whereHas('result', fn ($result) => $result
+                    ->where('performed_by', $radiographerId)->whereNotNull('reported_at')))
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                    $query->whereHas('bill', fn ($bill) => $bill
+                        ->where('bill_no', 'like', "%{$search}%")
+                        ->orWhere('patient_name', 'like', "%{$search}%"))
+                        ->orWhereHas('service', fn ($service) => $service->where('name', 'like', "%{$search}%"));
+                }))
+                ->latest('bill_items.created_at')
+                ->paginate(15)
+                ->withQueryString();
+
+            return view('staff.results.radiographer-worklist', compact('studies', 'search', 'from', 'to', 'status'));
+        }
+
+        if ($staffType === 'radiologist') {
             $filters = $request->validate([
                 'search' => 'nullable|string|max:255',
                 'from' => 'nullable|date',
@@ -76,8 +127,8 @@ class StaffResultController extends Controller
                         ->orWhereHas('billItem.service', fn ($service) => $service->where('name', 'like', "%{$search}%"))
                         ->orWhereHas('performer', fn ($performer) => $performer->where('name', 'like', "%{$search}%"));
                 }))
-                ->when($from !== '', fn ($query) => $query->whereDate('performed_at', '>=', $from))
-                ->when($to !== '', fn ($query) => $query->whereDate('performed_at', '<=', $to))
+                ->when($from !== '', fn ($query) => $query->where('performed_at', '>=', Carbon::parse($from)->startOfDay()))
+                ->when($to !== '', fn ($query) => $query->where('performed_at', '<', Carbon::parse($to)->addDay()->startOfDay()))
                 ->latest('performed_at')
                 ->paginate(20)
                 ->withQueryString();

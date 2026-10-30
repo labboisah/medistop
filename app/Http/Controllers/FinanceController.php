@@ -23,23 +23,27 @@ class FinanceController extends Controller
         }
 
         $monthStart = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
-        $monthEnd = $monthStart->copy()->endOfMonth();
 
         /* =========================
         TODAY CALCULATIONS
         ========================= */
 
-        $todayBills = \App\Models\Bill::whereDate('created_at', today())->get();
-
-        $todayGross = $todayBills->sum('total_amount');
-        $todayDiscount = $todayBills->sum('discount_amount');
+        $todayStart = today()->startOfDay();
+        $tomorrow = $todayStart->copy()->addDay();
+        $todayTotals = \App\Models\Bill::query()
+            ->where('created_at', '>=', $todayStart)
+            ->where('created_at', '<', $tomorrow)
+            ->selectRaw('COALESCE(SUM(total_amount), 0) as gross, COALESCE(SUM(discount_amount), 0) as discount')
+            ->first();
+        $todayGross = (float) $todayTotals->gross;
+        $todayDiscount = (float) $todayTotals->discount;
 
         $todayNetRevenue = $todayGross - $todayDiscount;
 
         $todayStaffShare = $todayNetRevenue * 0.4;
         $todayAnnexShare = $todayNetRevenue * 0.6;
 
-        $todayExpenses = \App\Models\Expense::whereDate('expense_date', today())
+        $todayExpenses = \App\Models\Expense::where('expense_date', today()->toDateString())
                             ->sum('amount');
 
         $todayProfit = $todayAnnexShare - $todayExpenses;
@@ -49,10 +53,14 @@ class FinanceController extends Controller
         MONTH CALCULATIONS
         ========================= */
 
-        $monthBills = \App\Models\Bill::whereBetween('created_at', [$monthStart, $monthEnd])->get();
-
-        $monthGross = $monthBills->sum('total_amount');
-        $monthDiscount = $monthBills->sum('discount_amount');
+        $nextMonth = $monthStart->copy()->addMonth();
+        $monthTotals = \App\Models\Bill::query()
+            ->where('created_at', '>=', $monthStart)
+            ->where('created_at', '<', $nextMonth)
+            ->selectRaw('COALESCE(SUM(total_amount), 0) as gross, COALESCE(SUM(discount_amount), 0) as discount')
+            ->first();
+        $monthGross = (float) $monthTotals->gross;
+        $monthDiscount = (float) $monthTotals->discount;
 
         $monthNetRevenue = $monthGross - $monthDiscount;
 
@@ -60,17 +68,15 @@ class FinanceController extends Controller
         $monthAnnexShare = $monthNetRevenue * 0.6;
         
 
-        $monthExpenses = \App\Models\Expense::whereBetween('expense_date', [
-                                $monthStart->toDateString(),
-                                $monthEnd->toDateString(),
-                            ])
+        $monthExpenses = \App\Models\Expense::where('expense_date', '>=', $monthStart->toDateString())
+                            ->where('expense_date', '<', $nextMonth->toDateString())
                             ->sum('amount');
 
         $selectedUserId = request('user_id', auth()->id());
-        $salaryPayment = SalaryPayment::whereDate('salary_month', $monthStart->toDateString())
+        $salaryPayment = SalaryPayment::where('salary_month', $monthStart->toDateString())
             ->where('user_id', $selectedUserId)
             ->first();
-        $monthSalaryPaid = SalaryPayment::whereDate('salary_month', $monthStart->toDateString())->sum('amount');
+        $monthSalaryPaid = SalaryPayment::where('salary_month', $monthStart->toDateString())->sum('amount');
         $users = User::where('role', 'user')->orderBy('name')->get();
         $monthTotalOutflow = $monthExpenses + $monthSalaryPaid;
         $monthProfit = $monthAnnexShare - $monthTotalOutflow;

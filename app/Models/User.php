@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable
 {
@@ -56,16 +57,24 @@ class User extends Authenticatable
         // TODAY'S FINANCIAL DATA
         // ===============================
 
-        $todayRevenue = Bill::whereDate('created_at', today())
+        $todayStart = today()->startOfDay();
+        $tomorrow = $todayStart->copy()->addDay();
+        $monthStart = now()->startOfMonth();
+        $nextMonth = $monthStart->copy()->addMonth();
+
+        $todayRevenue = Bill::where('created_at', '>=', $todayStart)
+            ->where('created_at', '<', $tomorrow)
             ->sum('final_amount');
 
-        $todayPayments = Payment::whereDate('created_at', today())
+        $todayPayments = Payment::where('created_at', '>=', $todayStart)
+            ->where('created_at', '<', $tomorrow)
             ->sum('amount');
 
-        $todayExpenses = Expense::whereDate('expense_date', today())
+        $todayExpenses = Expense::where('expense_date', today()->toDateString())
             ->sum('amount');
 
-        $todayOutstanding = Bill::whereDate('created_at', today())
+        $todayOutstanding = Bill::where('created_at', '>=', $todayStart)
+            ->where('created_at', '<', $tomorrow)
             ->sum('balance');
 
         $todayProfit = $todayPayments - $todayExpenses;
@@ -74,17 +83,20 @@ class User extends Authenticatable
         // MONTH SUMMARY
         // ===============================
 
-        $monthRevenue = Bill::whereMonth('created_at', now()->month)
+        $monthRevenue = Bill::where('created_at', '>=', $monthStart)
+            ->where('created_at', '<', $nextMonth)
             ->sum('final_amount');
 
-        $monthPayments = Payment::whereMonth('created_at', now()->month)
+        $monthPayments = Payment::where('created_at', '>=', $monthStart)
+            ->where('created_at', '<', $nextMonth)
             ->sum('amount');
 
-        $monthExpenses = Expense::whereMonth('expense_date', now()->month)
+        $monthExpenses = Expense::where('expense_date', '>=', $monthStart->toDateString())
+            ->where('expense_date', '<', $nextMonth->toDateString())
             ->sum('amount');
 
-        $monthSalaryPaid = SalaryPayment::whereYear('salary_month', now()->year)
-            ->whereMonth('salary_month', now()->month)
+        $monthSalaryPaid = SalaryPayment::where('salary_month', '>=', $monthStart->toDateString())
+            ->where('salary_month', '<', $nextMonth->toDateString())
             ->sum('amount');
 
         $monthProfit = $monthPayments - ($monthExpenses + $monthSalaryPaid);
@@ -109,28 +121,27 @@ class User extends Authenticatable
         TODAY CALCULATIONS
         ========================= */
 
-        $todayBills = \App\Models\Bill::whereDate('created_at', today())->get();
+        $todayStart = today()->startOfDay();
+        $tomorrow = $todayStart->copy()->addDay();
+        $monthStart = now()->startOfMonth();
+        $nextMonth = $monthStart->copy()->addMonth();
 
-        $todayGross = $todayBills->sum('total_amount');
-        $todayDiscount = $todayBills->sum('discount_amount');
-
+        $todayTotals = Bill::query()
+            ->where('created_at', '>=', $todayStart)
+            ->where('created_at', '<', $tomorrow)
+            ->selectRaw('COALESCE(SUM(total_amount), 0) as gross, COALESCE(SUM(discount_amount), 0) as discount')
+            ->first();
+        $todayGross = (float) $todayTotals->gross;
+        $todayDiscount = (float) $todayTotals->discount;
         $todayNetRevenue = $todayGross - $todayDiscount;
 
-        $todayStaffShare = 0;
-        $todayAnnexShare = 0;
-        $todayRadiographerShare = 0;
-        $todayRadiologistShare = 0;
+        $todayShares = $this->billSharesBetween($todayStart, $tomorrow);
+        $todayStaffShare = $todayShares['staff'];
+        $todayAnnexShare = $todayShares['annex'];
+        $todayRadiographerShare = $todayShares['radiographer'];
+        $todayRadiologistShare = $todayShares['radiologist'];
 
-        foreach($todayBills as $bill){
-            $shares = $bill->shares();
-            $todayStaffShare += $shares['staff'];
-            $todayAnnexShare += $shares['annex'];
-            $todayRadiographerShare += $shares['radiographer'];
-            $todayRadiologistShare += $shares['radiologist'];
-        }
-
-        $todayExpenses = \App\Models\Expense::whereDate('expense_date', today())
-                            ->sum('amount');
+        $todayExpenses = Expense::where('expense_date', today()->toDateString())->sum('amount');
 
         $todayRefunds = 0;
 
@@ -141,33 +152,28 @@ class User extends Authenticatable
         MONTH CALCULATIONS
         ========================= */
 
-        $monthBills = \App\Models\Bill::whereMonth('created_at', now()->month)->get();
-
-        $monthGross = $monthBills->sum('total_amount');
-        $monthDiscount = $monthBills->sum('discount_amount');
-
+        $monthTotals = Bill::query()
+            ->where('created_at', '>=', $monthStart)
+            ->where('created_at', '<', $nextMonth)
+            ->selectRaw('COALESCE(SUM(total_amount), 0) as gross, COALESCE(SUM(discount_amount), 0) as discount')
+            ->first();
+        $monthGross = (float) $monthTotals->gross;
+        $monthDiscount = (float) $monthTotals->discount;
         $monthNetRevenue = $monthGross - $monthDiscount;
-        $monthStaffShare = 0;
-        $monthAnnexShare = 0;
-        $monthRadiographerShare = 0;
-        $monthRadiologistShare = 0;
+        $monthShares = $this->billSharesBetween($monthStart, $nextMonth);
+        $monthStaffShare = $monthShares['staff'];
+        $monthAnnexShare = $monthShares['annex'];
+        $monthRadiographerShare = $monthShares['radiographer'];
+        $monthRadiologistShare = $monthShares['radiologist'];
 
-        foreach($monthBills as $bill){
-            $shares = $bill->shares();
-            $monthStaffShare += $shares['staff'];
-            $monthAnnexShare += $shares['annex'];
-            $monthRadiographerShare += $shares['radiographer'];
-            $monthRadiologistShare += $shares['radiologist'];
-        }
-        
-
-        $monthExpenses = \App\Models\Expense::whereMonth('expense_date', now()->month)
-                            ->sum('amount');
+        $monthExpenses = Expense::where('expense_date', '>=', $monthStart->toDateString())
+            ->where('expense_date', '<', $nextMonth->toDateString())
+            ->sum('amount');
 
         $monthRefunds = 0;
 
-        $monthSalaryPaid = SalaryPayment::whereYear('salary_month', now()->year)
-            ->whereMonth('salary_month', now()->month)
+        $monthSalaryPaid = SalaryPayment::where('salary_month', '>=', $monthStart->toDateString())
+            ->where('salary_month', '<', $nextMonth->toDateString())
             ->sum('amount');
 
         $monthProfit = $monthAnnexShare - ($monthExpenses + $monthSalaryPaid + $monthRefunds);
@@ -197,5 +203,35 @@ class User extends Authenticatable
             'monthProfit' => $monthProfit,
         ];
 
+    }
+
+    /**
+     * Aggregate the same per-item shares used by Bill::shares without loading bills/items.
+     * The current allocation formula subtracts the full bill discount from each item;
+     * keep that calculation unchanged here to avoid silently changing financial reports.
+     */
+    private function billSharesBetween($start, $end): array
+    {
+        $totals = DB::table('bill_items')
+            ->join('bills', 'bills.id', '=', 'bill_items.bill_id')
+            ->join('services', 'services.id', '=', 'bill_items.service_id')
+            ->join('categories', 'categories.id', '=', 'services.category_id')
+            ->leftJoin('revenue_sharing_rules', 'revenue_sharing_rules.category_id', '=', 'categories.id')
+            ->where('bills.created_at', '>=', $start)
+            ->where('bills.created_at', '<', $end)
+            ->selectRaw(
+                'COALESCE(SUM((bill_items.price - bills.discount_amount) * COALESCE(revenue_sharing_rules.staff_percent, 0) / 100), 0) as staff, '
+                . 'COALESCE(SUM((bill_items.price - bills.discount_amount) * COALESCE(revenue_sharing_rules.annex_percent, 0) / 100), 0) as annex, '
+                . 'COALESCE(SUM((bill_items.price - bills.discount_amount) * COALESCE(revenue_sharing_rules.radiographer_percent, 0) / 100), 0) as radiographer, '
+                . 'COALESCE(SUM((bill_items.price - bills.discount_amount) * COALESCE(revenue_sharing_rules.radiologist_percent, 0) / 100), 0) as radiologist'
+            )
+            ->first();
+
+        return [
+            'staff' => (float) $totals->staff,
+            'annex' => (float) $totals->annex,
+            'radiographer' => (float) $totals->radiographer,
+            'radiologist' => (float) $totals->radiologist,
+        ];
     }
 }

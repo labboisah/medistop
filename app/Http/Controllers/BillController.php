@@ -8,6 +8,7 @@ use App\Models\Service;
 use App\Models\BillItem;
 use App\Models\Bill;
 use App\Services\RevenueCalculator;
+use Carbon\Carbon;
 
 class BillController extends Controller
 {
@@ -25,13 +26,14 @@ class BillController extends Controller
         $from = $filters['from'] ?? '';
         $to = $filters['to'] ?? '';
         $bills = Bill::withCount('results')
+            ->with('items.service.category.revenueRule')
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('bill_no', 'like', "%{$search}%")
                     ->orWhere('patient_name', 'like', "%{$search}%")
                     ->orWhereHas('items.service', fn ($service) => $service->where('name', 'like', "%{$search}%"));
             }))
-            ->when($from !== '', fn ($query) => $query->whereDate('created_at', '>=', $from))
-            ->when($to !== '', fn ($query) => $query->whereDate('created_at', '<=', $to))
+            ->when($from !== '', fn ($query) => $query->where('created_at', '>=', Carbon::parse($from)->startOfDay()))
+            ->when($to !== '', fn ($query) => $query->where('created_at', '<', Carbon::parse($to)->addDay()->startOfDay()))
             ->latest()
             ->paginate(15)
             ->withQueryString();

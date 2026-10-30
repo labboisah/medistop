@@ -5,7 +5,7 @@
 
 ## Executive summary
 
-The application already uses database pagination on many operational lists and eager loading in several controllers. The main performance risk is the finance dashboard: it loads every bill in selected date periods into PHP and iterates bills to compute revenue shares. The staff worklist also has a path that returns an unbounded result set. Date and text filtering patterns, limited date indexing, and very large accepted imaging uploads are likely to become more costly as activity and image volume grow.
+The application already uses database pagination on many operational lists and eager loading in several controllers. The main performance risk is the finance dashboard: it loads every bill in selected date periods into PHP and iterates bills to compute revenue shares. Radiographers also have to locate work by entering a bill number instead of using a queue. Date and text filtering patterns, limited date indexing, and very large accepted imaging uploads are likely to become more costly as activity and image volume grow.
 
 The most useful first step is to establish production measurements, then move aggregate calculations into SQL and bound every operational list. In parallel, clarify the imaging queue states and make the common list and form interactions easier to operate on small screens and with keyboard/screen reader support. This is a code review, not a measured load test: there are no response-time, query-count, data-volume, device, or production configuration measurements in this report.
 
@@ -88,3 +88,16 @@ The most useful first step is to establish production measurements, then move ag
 - This was a source/configuration review of the local checkout. No production environment values, patient data, live request traces, representative data volume, browser/device usability session, or load test was examined.
 - No test suite or benchmark was run. Conclusions about impact are risks inferred from the inspected code paths, not measured response-time claims.
 - Priority should be confirmed using Phase 1 metrics, especially for database indexes, image upload architecture, and asynchronous exports.
+
+## Implementation status
+
+The following code improvements have been applied after the review:
+
+- Finance summaries now use database aggregates and bounded date ranges; the month calculation is limited to the selected year. The existing per-item revenue share formula was retained to avoid changing current financial figures as part of a performance change.
+- Bill listing eager loads the service/category share data and computes each row's share summary once. Bill date filters use timestamp ranges.
+- Radiographers now have a searchable, date-filterable, paginated worklist with status filters for awaiting upload, awaiting report, and report ready to print. It includes paid investigations and the signed-in radiographer's own submitted studies; manual bill lookup remains available.
+- Shared table filters adapt to small screens, have visible Apply and Reset controls, and retain unrelated query parameters when reset.
+- Dashboard summary is computed once per request, and category/service counts use SQL count queries.
+- Regression coverage was added for finance date boundaries and radiographer queue visibility. The Laravel suite completed with 28 passing tests and 82 assertions; `npm.cmd run build` completed successfully.
+
+Production latency/query profiling, database-specific index selection, resumable upload/progress work, export queuing, and role-based usability sessions remain to be done. Those steps need representative production/staging measurements or deployment requirements before implementation.

@@ -6,7 +6,7 @@
     <div class="bg-white p-6 rounded-xl shadow">
         <h3 class="text-sm text-gray-500">Categories</h3>
         <p class="text-3xl font-bold text-primary mt-2">
-            {{ App\Models\Category::all()->count() }}
+            {{ App\Models\Category::count() }}
         </p>
     </div>
 
@@ -14,7 +14,7 @@
     <div class="bg-white p-6 rounded-xl shadow">
         <h3 class="text-sm text-gray-500">Services</h3>
         <p class="text-3xl font-bold text-secondary mt-2">
-            {{ App\Models\Service::all()->count() }}
+            {{ App\Models\Service::count() }}
         </p>
     </div>
 
@@ -22,7 +22,7 @@
     <div class="bg-white p-6 rounded-xl shadow">
         <h3 class="text-sm text-gray-500">Today's Gross Revenue</h3>
         <p class="text-3xl font-bold text-accent mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayGross'], 2) }}
+            ₦{{ number_format($financialSummary['todayGross'], 2) }}
         </p>
     </div>
 
@@ -30,7 +30,7 @@
     <div class="bg-white p-6 rounded-xl shadow">
         <h3 class="text-sm text-gray-500">Net Balance</h3>
         <p class="text-3xl font-bold text-blue-700 mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayNetRevenue'], 2) }}
+            ₦{{ number_format($financialSummary['todayNetRevenue'], 2) }}
         </p>
     </div>
 

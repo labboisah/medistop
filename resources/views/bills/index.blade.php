@@ -37,6 +37,7 @@
 
         <tbody>
         @foreach($bills as $bill)
+            @php($shares = $bill->shares())
             <tr class="border-b hover:bg-lightbg">
                 <td class="py-3 font-semibold text-primary">
                     {{ $bill->bill_no }}
@@ -57,19 +58,19 @@
                 </td>
 
                 <td class="text-accent font-semibold">
-                    ₦{{ number_format($bill->shares()['staff'],2) }}
+                    ₦{{ number_format($shares['staff'],2) }}
                 </td>
 
                 <td class="text-accent font-semibold">
-                    ₦{{ number_format($bill->shares()['annex'],2) }}
+                    ₦{{ number_format($shares['annex'],2) }}
                 </td>
 
                 <td class="text-accent font-semibold">
-                    ₦{{ number_format($bill->shares()['radiologist'],2) }}
+                    ₦{{ number_format($shares['radiologist'],2) }}
                 </td>
 
                 <td class="text-accent font-semibold">
-                    ₦{{ number_format($bill->shares()['radiographer'],2) }}
+                    ₦{{ number_format($shares['radiographer'],2) }}
                 </td>
 
                 <td>

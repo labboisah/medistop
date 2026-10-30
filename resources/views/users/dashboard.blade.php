@@ -4,56 +4,56 @@
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Revenue Today</h3>
         <p class="text-2xl font-bold text-primary mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayGross'], 2) }}
+            ₦{{ number_format($financialSummary['todayGross'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Staff Allocation</h3>
         <p class="text-2xl font-bold text-accent mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayStaffShare'], 2) }}
+            ₦{{ number_format($financialSummary['todayStaffShare'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Radiologist Allocation</h3>
         <p class="text-2xl font-bold text-accent mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayRadiologistShare'], 2) }}
+            ₦{{ number_format($financialSummary['todayRadiologistShare'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Radiographers Allocation</h3>
         <p class="text-2xl font-bold text-accent mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayRadiographerShare'], 2) }}
+            ₦{{ number_format($financialSummary['todayRadiographerShare'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Refunds Today</h3>
         <p class="text-2xl font-bold text-red-600 mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayRefunds'], 2) }}
+            ₦{{ number_format($financialSummary['todayRefunds'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Expenses Today</h3>
         <p class="text-2xl font-bold text-red-600 mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayExpenses'], 2) }}
+            ₦{{ number_format($financialSummary['todayExpenses'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Expenses Discount</h3>
         <p class="text-2xl font-bold text-red-600 mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayDiscount'], 2) }}
+            ₦{{ number_format($financialSummary['todayDiscount'], 2) }}
         </p>
     </div>
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h3 class="text-sm text-gray-500">Profit Today</h3>
         <p class="text-2xl font-bold text-secondary mt-2">
-            ₦{{ number_format(auth()->user()->finacialCalculation()['todayProfit'], 2) }}
+            ₦{{ number_format($financialSummary['todayProfit'], 2) }}
         </p>
     </div>
 

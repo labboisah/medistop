@@ -48,7 +48,9 @@ Route::get('/dashboard', function () {
         return redirect()->route('staff.dashboard');
     }
 
-    return view('dashboard');
+    $financialSummary = auth()->user()->finacialCalculation();
+
+    return view('dashboard', compact('financialSummary'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
