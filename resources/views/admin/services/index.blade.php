@@ -24,6 +24,7 @@
             <tr>
                 <th class="py-3">Service Name</th>
                 <th>Category</th>
+                <th>Result workflow</th>
                 <th>Price (₦)</th>
                 <th class="text-right">Action</th>
             </tr>
@@ -42,6 +43,14 @@
                         <span class="px-3 py-1 bg-lightbg rounded-full text-xs text-secondary font-semibold">
                             {{ $service->category->name }}
                         </span>
+                    </td>
+
+                    <td>
+                        @if($service->is_xray)
+                            <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">X-Ray imaging + radiologist</span>
+                        @else
+                            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">Direct result entry</span>
+                        @endif
                     </td>
 
                     <td class="font-semibold text-primary">

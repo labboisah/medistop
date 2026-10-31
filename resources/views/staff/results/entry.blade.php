@@ -26,6 +26,7 @@
         @php
             $result = $item->result;
             $isRadiographer = $staffType === 'radiographer';
+            $usesXrayWorkflow = $isRadiographer && (bool) $item->service->is_xray;
             $lockedByOtherReporter = $result && $result->reported_by && $result->reported_by !== auth()->id();
         @endphp
 
@@ -79,7 +80,7 @@
                 </div>
             @endif
 
-            @if($isRadiographer)
+            @if($usesXrayWorkflow)
                 @if($result?->performed_by && $result->performed_by !== auth()->id())
                     <div class="bg-lightbg p-4 rounded-xl text-sm text-gray-600">
                         This investigation has been marked as performed by {{ optional($result->performer)->name ?? 'another staff member' }}.

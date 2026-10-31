@@ -10,7 +10,7 @@
 
     <div class="bg-white p-6 rounded-2xl shadow">
         <h2 class="text-2xl font-bold text-primary">Imaging Worklist</h2>
-        <p class="text-sm text-gray-600 mt-1">Studies sent to you by radiographers and awaiting your report.</p>
+        <p class="text-sm text-gray-600 mt-1">X-Ray studies sent to you by radiographers and awaiting your report.</p>
     </div>
 
     <div class="bg-white rounded-2xl shadow overflow-x-auto">

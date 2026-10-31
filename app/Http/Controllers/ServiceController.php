@@ -56,12 +56,14 @@ class ServiceController extends Controller
             'name'        => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'price'       => 'required|numeric|min:0',
+            'is_xray'     => 'nullable|boolean',
         ]);
 
         Service::create([
             'name'        => $request->name,
             'category_id' => $request->category_id,
             'price'       => $request->price,
+            'is_xray'     => $request->boolean('is_xray'),
         ]);
 
         return redirect()
@@ -96,12 +98,14 @@ class ServiceController extends Controller
             'name'        => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'price'       => 'required|numeric|min:0',
+            'is_xray'     => 'nullable|boolean',
         ]);
 
         $service->update([
             'name'        => $request->name,
             'category_id' => $request->category_id,
             'price'       => $request->price,
+            'is_xray'     => $request->boolean('is_xray'),
         ]);
 
         return redirect()

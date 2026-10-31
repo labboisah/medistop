@@ -194,7 +194,7 @@
                             d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v14l-4-2-4 2-4-2-4 2V6a2 2 0 012-2z"/>
                     </svg>
 
-                    <span>{{ (auth()->user()->staff_type ?? '') === 'radiologist' ? 'Imaging Worklist' : 'Result Entry' }}</span>
+                    <span>{{ (auth()->user()->staff_type ?? '') === 'radiologist' ? 'X-Ray Reporting' : ((auth()->user()->staff_type ?? '') === 'radiographer' ? 'X-Ray Imaging' : 'Result Reporting') }}</span>
                 </a>
 
                 <a href="{{ route('staff.results.reports') }}"

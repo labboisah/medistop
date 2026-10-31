@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto space-y-6">
     <div class="bg-white p-6 rounded-2xl shadow">
         <h2 class="text-2xl font-bold text-primary">Radiographer Worklist</h2>
-        <p class="text-sm text-gray-600 mt-1">Find paid investigations, send imaging for reporting, and print completed reports.</p>
+        <p class="text-sm text-gray-600 mt-1">Only services marked as X-Ray appear here. Upload images for the assigned radiologist, then print the completed report.</p>
     </div>
 
     @include('components.table-filters', [

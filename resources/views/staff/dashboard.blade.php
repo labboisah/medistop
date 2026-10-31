@@ -3,6 +3,30 @@
 @section('page-title', 'Staff Dashboard')
 
 @section('content')
+<div class="mb-6 flex flex-col gap-3 rounded-2xl bg-white p-5 shadow sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <h2 class="text-lg font-bold text-primary">Result workflow</h2>
+        <p class="text-sm text-gray-600">
+            @if($staffType === 'radiographer')
+                Open paid X-Ray investigations to upload images for radiologist review.
+            @elseif($staffType === 'radiologist')
+                Review assigned X-Ray images and complete radiology reports.
+            @else
+                Enter and manage results for non-X-Ray investigations.
+            @endif
+        </p>
+    </div>
+    <a href="{{ route('staff.results.index') }}" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-accent px-5 py-3 font-semibold text-white hover:bg-green-600">
+        @if($staffType === 'radiographer')
+            Open X-Ray Imaging Worklist
+        @elseif($staffType === 'radiologist')
+            Open X-Ray Reporting Worklist
+        @else
+            Open Result Reporting
+        @endif
+    </a>
+</div>
+
 <div class="grid md:grid-cols-3 gap-6 mb-8">
     <div class="bg-white p-6 rounded-xl shadow">
         <p class="text-sm text-gray-500">Results Today</p>
@@ -36,17 +60,21 @@
                     @endforeach
                 </div>
             @endif
-        @else
-            <h3 class="font-bold text-primary mb-4">Start Result Entry</h3>
+        @endif
+
+        <div class="{{ $staffType === 'radiologist' ? 'mt-6 border-t pt-5' : '' }}">
+            <h3 class="font-bold text-primary mb-2">Find an Investigation</h3>
+            <p class="text-sm text-gray-600 mb-4">All staff can use bill search for non-X-Ray results. X-Ray items remain in the assigned imaging workflow.</p>
             <form method="POST" action="{{ route('staff.results.lookup') }}" class="space-y-4">
                 @csrf
-                <input type="text" name="bill_no" value="{{ old('bill_no') }}"
-                       placeholder="Example: B260719-1234"
-                       class="w-full px-4 py-3 border rounded-xl">
-                @error('bill_no')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
-                <button class="bg-accent text-white px-6 py-3 rounded-xl w-full">Open Bill</button>
+                <label class="sr-only" for="dashboard-bill-number">Bill number</label>
+                <input id="dashboard-bill-number" type="text" name="bill_no" value="{{ old('bill_no') }}"
+                       placeholder="Example: B260719-1234" required
+                       class="w-full rounded-xl border px-4 py-3 focus:border-accent focus:ring-accent">
+                @error('bill_no')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
+                <button class="w-full rounded-xl bg-accent px-6 py-3 font-semibold text-white">Search Investigation</button>
             </form>
-        @endif
+        </div>
     </div>
 
     <div class="bg-white p-6 rounded-xl shadow lg:col-span-2 overflow-x-auto">

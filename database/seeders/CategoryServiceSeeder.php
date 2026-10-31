@@ -185,7 +185,8 @@ class CategoryServiceSeeder extends Seeder
             Service::create([
                 'category_id' => $xrays->id,
                 'name' => $service . ' (X-Ray)',
-                'price' => 5000
+                'price' => 5000,
+                'is_xray' => true,
             ]);
         }
 

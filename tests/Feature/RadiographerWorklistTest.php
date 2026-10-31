@@ -59,7 +59,7 @@ class RadiographerWorklistTest extends TestCase
             'radiologist_percent' => 20,
         ]);
 
-        return Service::create(['category_id' => $category->id, 'name' => 'Chest X-Ray', 'price' => 100]);
+        return Service::create(['category_id' => $category->id, 'name' => 'Chest X-Ray', 'price' => 100, 'is_xray' => true]);
     }
 
     private function billItem(User $owner, Service $service, string $number, string $patient, bool $paid = true): BillItem

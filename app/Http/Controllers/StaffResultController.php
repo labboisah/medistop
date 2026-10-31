@@ -42,6 +42,7 @@ class StaffResultController extends Controller
         $pendingStudies = $staffType === 'radiologist'
             ? BillResult::with(['bill', 'billItem.service', 'performer', 'images'])
                 ->where('radiologist_id', auth()->id())
+                ->whereHas('billItem.service', fn ($service) => $service->where('is_xray', true))
                 ->whereNull('reported_at')
                 ->latest('performed_at')
                 ->limit(5)
@@ -76,6 +77,7 @@ class StaffResultController extends Controller
 
             $studies = BillItem::query()
                 ->with(['bill', 'service', 'result.images', 'result.assignedRadiologist'])
+                ->whereHas('service', fn ($service) => $service->where('is_xray', true))
                 ->whereHas('bill', function ($bill) use ($from, $to) {
                     $bill->where(function ($paid) {
                         $paid->where('payment_status', 'paid')->orWhere('balance', '<=', 0);
@@ -120,6 +122,7 @@ class StaffResultController extends Controller
             $to = $filters['to'] ?? '';
             $studies = BillResult::with(['bill', 'billItem.service', 'performer', 'images'])
                 ->where('radiologist_id', auth()->id())
+                ->whereHas('billItem.service', fn ($service) => $service->where('is_xray', true))
                 ->whereNull('reported_at')
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                     $query->whereHas('bill', fn ($bill) => $bill->where('patient_name', 'like', "%{$search}%")
@@ -155,6 +158,36 @@ class StaffResultController extends Controller
             return back()->withInput()->withErrors(['bill_no' => 'Only fully paid bills are allowed for result entry.']);
         }
 
+        $staffType = auth()->user()->staff_type ?? 'staff';
+        $eligibleItems = $bill->items()
+            ->where(function ($items) use ($staffType) {
+                $items->whereHas('service', fn ($service) => $service->where('is_xray', false));
+
+                if ($staffType === 'radiographer') {
+                    $items->orWhere(function ($xrayItems) {
+                        $xrayItems->whereHas('service', fn ($service) => $service->where('is_xray', true))
+                            ->where(function ($work) {
+                            $work->whereDoesntHave('result')
+                                ->orWhereHas('result', fn ($result) => $result->where('performed_by', auth()->id()));
+                        });
+                    });
+                } elseif ($staffType === 'radiologist') {
+                    $items->orWhere(function ($xrayItems) {
+                        $xrayItems->whereHas('service', fn ($service) => $service->where('is_xray', true))
+                            ->whereHas('result', fn ($result) => $result->where('radiologist_id', auth()->id()));
+                    });
+                }
+            })
+            ->exists();
+
+        if (! $eligibleItems) {
+            $message = match ($staffType) {
+                default => 'This bill has no non-X-Ray investigation for direct result entry or X-Ray work available to your account.',
+            };
+
+            return back()->withInput()->withErrors(['bill_no' => $message]);
+        }
+
         return redirect()->route('staff.results.entry', $bill);
     }
 
@@ -175,11 +208,18 @@ class StaffResultController extends Controller
         $staffType = auth()->user()->staff_type ?? 'staff';
         if ($staffType === 'radiologist') {
             $assignedItems = $bill->items->filter(fn ($item) =>
-                (int) ($item->result?->radiologist_id ?? 0) === (int) auth()->id()
+                ! $item->service->is_xray
+                || (int) ($item->result?->radiologist_id ?? 0) === (int) auth()->id()
             )->values();
 
-            abort_if($assignedItems->isEmpty(), 403);
+            abort_if($assignedItems->isEmpty(), 403, 'No non-X-Ray investigation or X-Ray study assigned to you was found on this bill.');
             $bill->setRelation('items', $assignedItems);
+        } else {
+            $reportableItems = $staffType === 'radiographer'
+                ? $bill->items
+                : $bill->items->reject(fn ($item) => $item->service->is_xray)->values();
+            abort_if($reportableItems->isEmpty(), 403, 'X-Ray results must be reported by the assigned radiologist.');
+            $bill->setRelation('items', $reportableItems);
         }
 
         $templates = ResultTemplate::where('user_id', auth()->id())
@@ -205,17 +245,25 @@ class StaffResultController extends Controller
         $this->ensurePaidBill($bill);
 
         $staffType = auth()->user()->staff_type ?? 'staff';
+        $request->validate(['bill_item_id' => 'required|integer|exists:bill_items,id']);
+        $billItem = $bill->items()->with('service')->whereKey($request->integer('bill_item_id'))->firstOrFail();
+        $isXray = (bool) $billItem->service->is_xray;
+
+        $usesXrayWorkflow = $isXray && $staffType === 'radiographer';
+        if ($isXray && ! $usesXrayWorkflow && $staffType !== 'radiologist') {
+            abort(403, 'X-Ray results must be handled through the radiographer and assigned radiologist workflow.');
+        }
 
         $validated = $request->validate([
-            'bill_item_id' => 'required|exists:bill_items,id',
+            'bill_item_id' => 'required|integer|exists:bill_items,id',
             'clinical_note' => 'nullable|string',
-            'findings' => $staffType === 'radiographer' ? 'nullable|string' : 'required|string',
+            'findings' => $usesXrayWorkflow ? 'nullable|string' : 'required|string',
             'impression' => 'nullable|string',
             'save_template' => 'nullable|boolean',
             'template_name' => 'required_if:save_template,1|nullable|string|max:255',
-            'radiologist_id' => $staffType === 'radiographer' ? 'required|integer|exists:users,id' : 'nullable|integer',
-            'images' => $staffType === 'radiographer' ? 'required|array|min:1' : 'nullable|array',
-            'images.*' => [
+            'radiologist_id' => $usesXrayWorkflow ? 'required|integer|exists:users,id' : 'prohibited',
+            'images' => $usesXrayWorkflow ? 'required|array|min:1' : 'prohibited',
+            'images.*' => $usesXrayWorkflow ? [
                 'file',
                 'max:512000',
                 function ($attribute, $file, $fail) {
@@ -235,14 +283,12 @@ class StaffResultController extends Controller
                         $fail('Upload an image, DICOM file, or DICOM ZIP archive.');
                     }
                 },
-            ],
+            ] : 'prohibited',
         ]);
-
-        $billItem = $bill->items()->whereKey($validated['bill_item_id'])->firstOrFail();
 
         $existingResult = BillResult::where('bill_item_id', $billItem->id)->first();
 
-        if ($staffType === 'radiographer') {
+        if ($usesXrayWorkflow) {
             if ($existingResult?->reported_at) {
                 abort(403, 'This investigation already has a completed radiologist report.');
             }
@@ -292,11 +338,11 @@ class StaffResultController extends Controller
                 ->with('success', "Investigation sent to {$radiologist->name} for reporting.");
         }
 
-        if ($staffType === 'radiologist' && (int) ($existingResult?->radiologist_id ?? 0) !== (int) auth()->id()) {
+        if ($isXray && $staffType === 'radiologist' && (int) ($existingResult?->radiologist_id ?? 0) !== (int) auth()->id()) {
             abort(403, 'This investigation is not assigned to your account.');
         }
 
-        if ($existingResult?->radiologist_id && $staffType !== 'radiologist') {
+        if ($isXray && $existingResult?->radiologist_id && $staffType !== 'radiologist') {
             abort(403, 'Only the assigned radiologist can report on this investigation.');
         }
 
@@ -331,12 +377,6 @@ class StaffResultController extends Controller
                     'impression' => $validated['impression'] ?? null,
                 ]
             );
-        }
-
-        if ($staffType === 'radiologist') {
-            return redirect()
-                ->route('staff.results.index')
-                ->with('success', 'Report saved. The radiographer can now print it.');
         }
 
         return redirect()->route('staff.results.print', $result)->with('success', 'Result saved successfully.');
@@ -489,6 +529,7 @@ class StaffResultController extends Controller
     private function authorizeImageAccess(BillResultImage $image): void
     {
         $result = $image->result;
+        abort_unless($result->billItem?->service?->is_xray, 404);
         $staffType = auth()->user()->staff_type ?? 'staff';
 
         $isAssignedRadiologist = $staffType === 'radiologist'

@@ -74,6 +74,11 @@
                        class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-accent focus:outline-none">
             </div>
 
+            <label class="flex items-start gap-3 rounded-xl border border-gray-200 p-4">
+                <input type="checkbox" name="is_xray" value="1" @checked(old('is_xray', $service->is_xray)) class="mt-1 rounded border-gray-300 text-accent focus:ring-accent">
+                <span><span class="block font-medium text-gray-800">X-Ray investigation</span><span class="mt-1 block text-sm text-gray-500">Only checked services use the radiographer image-upload and radiologist-report workflow.</span></span>
+            </label>
+
             <!-- Actions -->
             <div class="flex justify-between items-center">
 
