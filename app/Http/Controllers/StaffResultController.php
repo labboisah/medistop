@@ -144,6 +144,8 @@ class StaffResultController extends Controller
 
     public function otherResults()
     {
+        $this->denyRadiographerOtherResults();
+
         return view('staff.results.other-index');
     }
 
@@ -154,11 +156,17 @@ class StaffResultController extends Controller
 
     public function lookupOther(Request $request)
     {
+        $this->denyRadiographerOtherResults();
+
         return $this->processBillLookup($request, true);
     }
 
     private function processBillLookup(Request $request, bool $otherResultsOnly)
     {
+        if ($otherResultsOnly) {
+            $this->denyRadiographerOtherResults();
+        }
+
         $request->validate([
             'bill_no' => 'required|string',
         ]);
@@ -209,6 +217,10 @@ class StaffResultController extends Controller
 
     public function entry(Bill $bill)
     {
+        if (request()->query('workflow') === 'other') {
+            $this->denyRadiographerOtherResults();
+        }
+
         $this->ensurePaidBill($bill);
 
         $bill->load([
@@ -268,6 +280,10 @@ class StaffResultController extends Controller
         $request->validate(['bill_item_id' => 'required|integer|exists:bill_items,id']);
         $billItem = $bill->items()->with('service')->whereKey($request->integer('bill_item_id'))->firstOrFail();
         $isXray = (bool) $billItem->service->is_xray;
+
+        if (! $isXray && $staffType === 'radiographer') {
+            abort(403, 'Other result reporting is not available to radiographers.');
+        }
 
         $usesXrayWorkflow = $isXray && $staffType === 'radiographer';
         if ($isXray && ! $usesXrayWorkflow && $staffType !== 'radiologist') {
@@ -404,7 +420,7 @@ class StaffResultController extends Controller
 
     public function viewImage(BillResultImage $image)
     {
-        $this->authorizeImageAccess($image);
+        $this->authorizeImageAccess($image, true);
 
         $disk = Storage::disk('local');
         abort_unless($disk->exists($image->path), 404);
@@ -525,11 +541,16 @@ class StaffResultController extends Controller
 
     public function print(BillResult $result)
     {
+        $result->loadMissing(['bill', 'billItem.service']);
+
         $isReporter = $result->reported_by === auth()->id();
         $isPerformingRadiographer = (auth()->user()->staff_type ?? null) === 'radiographer'
             && $result->performed_by === auth()->id();
+        $isRequestOwner = auth()->user()->role === 'user'
+            && (int) $result->bill?->user_id === (int) auth()->id()
+            && (bool) $result->billItem?->service?->is_xray;
 
-        if (! $result->reported_at || (! $isReporter && ! $isPerformingRadiographer)) {
+        if (! $result->reported_at || (! $isReporter && ! $isPerformingRadiographer && ! $isRequestOwner)) {
             abort(403);
         }
 
@@ -546,7 +567,7 @@ class StaffResultController extends Controller
         return view('staff.results.print', compact('result'));
     }
 
-    private function authorizeImageAccess(BillResultImage $image): void
+    private function authorizeImageAccess(BillResultImage $image, bool $allowRequestOwner = false): void
     {
         $result = $image->result;
         abort_unless($result->billItem?->service?->is_xray, 404);
@@ -556,8 +577,21 @@ class StaffResultController extends Controller
             && (int) $result->radiologist_id === (int) auth()->id();
         $isPerformingRadiographer = $staffType === 'radiographer'
             && $result->performed_by === auth()->id();
+        $isRequestOwner = $allowRequestOwner
+            && auth()->user()->role === 'user'
+            && $result->reported_at
+            && (int) $result->bill?->user_id === (int) auth()->id();
 
-        abort_unless($isAssignedRadiologist || $isPerformingRadiographer, 403);
+        abort_unless($isAssignedRadiologist || $isPerformingRadiographer || $isRequestOwner, 403);
+    }
+
+    private function denyRadiographerOtherResults(): void
+    {
+        abort_if(
+            (auth()->user()->staff_type ?? null) === 'radiographer',
+            403,
+            'Other result reporting is not available to radiographers.'
+        );
     }
 
     private function ensurePaidBill(Bill $bill): void

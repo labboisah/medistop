@@ -45,9 +45,7 @@
         net revenue stood at
         <strong>NGN {{ number_format($net,2) }}</strong>.
 
-        Staff allocation was
-        <strong>NGN {{ number_format($staffShare,2) }}</strong>,
-        radiographers earned
+        Radiographers earned
         <strong>NGN {{ number_format($radiographerShare,2) }}</strong>,
         radiologists earned
         <strong>NGN {{ number_format($radiologistShare,2) }}</strong>,
@@ -71,7 +69,6 @@
 
         <ul class="text-sm text-gray-700 space-y-2 list-disc list-inside">
             <li>Discount impact represents {{ $gross > 0 ? number_format(($discount/$gross)*100,2) : 0 }}% of total gross revenue.</li>
-            <li>Staff earnings account for {{ $net > 0 ? number_format(($staffShare/$net)*100,2) : 0 }}% of net revenue as per allocation policy.</li>
             <li>Radiologist earnings account for {{ $net > 0 ? number_format(($radiologistShare/$net)*100,2) : 0 }}% of net revenue as per allocation policy.</li>
             <li>Radiographer earnings account for {{ $net > 0 ? number_format(($radiographerShare/$net)*100,2) : 0 }}% of net revenue as per allocation policy.</li>
             <li>Profit margin for this period is {{ $net > 0 ? number_format(($profit/$net)*100,2) : 0 }}%.</li>
@@ -89,22 +86,21 @@
         </tr>
         <tr>
             <th>Net Revenue</th><td>NGN {{ number_format($net,2) }}</td>
-            <th>Staff Share</th><td>NGN {{ number_format($staffShare,2) }}</td>
-        </tr>
-        <tr>
             <th>Annex Share</th><td>NGN {{ number_format($annexShare,2) }}</td>
+        </tr>
+        <tr>
             <th>Radiologist Share</th><td>NGN {{ number_format($radiologistShare,2) }}</td>
-        </tr>
-        <tr>
             <th>Radiographer Share</th><td>NGN {{ number_format($radiographerShare,2) }}</td>
+        </tr>
+        <tr>
             <th>Refunds</th><td>NGN {{ number_format($refundsTotal ?? 0,2) }}</td>
-        </tr>
-        <tr>
             <th>Total Expenses</th><td>NGN {{ number_format($totalExpense,2) }}</td>
-            <th>Salary Paid</th><td>NGN {{ number_format($salaryAmount ?? 0,2) }}</td>
         </tr>
         <tr>
+            <th>Salary Paid</th><td>NGN {{ number_format($salaryAmount ?? 0,2) }}</td>
             <th>Total Outflow</th><td>NGN {{ number_format($totalOutflow ?? $totalExpense,2) }}</td>
+        </tr>
+        <tr>
             <th>Net Profit</th>
             <td style="color: {{ $profit >= 0 ? 'green' : 'red' }}" colspan="3">
                 NGN {{ number_format($profit,2) }}

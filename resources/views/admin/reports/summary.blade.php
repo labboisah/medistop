@@ -40,6 +40,14 @@
     </div>
 </div>
 
+<div class="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div class="rounded-2xl bg-white p-5 shadow"><p class="text-sm text-gray-500">Gross Revenue</p><p class="mt-2 text-xl font-bold text-primary">NGN {{ number_format($gross, 2) }}</p></div>
+    <div class="rounded-2xl bg-white p-5 shadow"><p class="text-sm text-gray-500">Net Revenue</p><p class="mt-2 text-xl font-bold text-primary">NGN {{ number_format($net, 2) }}</p></div>
+    <div class="rounded-2xl bg-white p-5 shadow"><p class="text-sm text-gray-500">Annex Share</p><p class="mt-2 text-xl font-bold text-primary">NGN {{ number_format($annexShare, 2) }}</p></div>
+    <div class="rounded-2xl bg-white p-5 shadow"><p class="text-sm text-gray-500">Total Outflow</p><p class="mt-2 text-xl font-bold text-red-600">NGN {{ number_format($totalOutflow ?? $totalExpense, 2) }}</p></div>
+    <div class="rounded-2xl bg-white p-5 shadow"><p class="text-sm text-gray-500">Net Profit</p><p class="mt-2 text-xl font-bold {{ $profit >= 0 ? 'text-green-600' : 'text-red-600' }}">NGN {{ number_format($profit, 2) }}</p></div>
+</div>
+
 <div class="bg-white p-8 rounded-2xl shadow mb-8">
     <h3 class="text-lg font-bold text-primary mb-4">Executive Financial Overview</h3>
 
@@ -51,9 +59,7 @@
         net revenue stood at
         <strong>NGN {{ number_format($net,2) }}</strong>.
 
-        Staff allocation was
-        <strong>NGN {{ number_format($staffShare,2) }}</strong>,
-        radiologists earned
+        Radiologists earned
         <strong>NGN {{ number_format($radiologistShare,2) }}</strong>,
         radiographers earned
         <strong>NGN {{ number_format($radiographerShare,2) }}</strong>,
@@ -81,7 +87,6 @@
         <ul class="text-sm text-gray-700 space-y-2 list-disc list-inside">
             <li>Discount impact represents {{ $gross > 0 ? number_format(($discount/$gross)*100,2) : 0 }}% of total gross revenue.</li>
             <li>Refunds reduced revenue by {{ $gross > 0 ? number_format((($refundsTotal ?? 0)/$gross)*100,2) : 0 }}% during the selected period.</li>
-            <li>Staff earnings account for {{ $net > 0 ? number_format(($staffShare/$net)*100,2) : 0 }}% of net revenue as per allocation policy.</li>
             <li>Radiologist earnings account for {{ $net > 0 ? number_format(($radiologistShare/$net)*100,2) : 0 }}% of net revenue as per allocation policy.</li>
             <li>Radiographer earnings account for {{ $net > 0 ? number_format(($radiographerShare/$net)*100,2) : 0 }}% of net revenue as per allocation policy.</li>
             <li>Expense-to-revenue ratio stands at {{ $net > 0 ? number_format(($totalExpense/$net)*100,2) : 0 }}%.</li>
@@ -108,12 +113,11 @@ function renderReportChart() {
     new Chart(document.getElementById('reportChart'), {
         type: 'bar',
         data: {
-            labels: ['Gross','Discount','Staff Share','Radiologist Share','Radiographer Share','Annex Share','Expenses','Salary','Profit'],
+            labels: ['Gross','Discount','Radiologist Share','Radiographer Share','Annex Share','Expenses','Salary','Profit'],
             datasets: [{
                 data: [
                     {{ $gross }},
                     {{ $discount }},
-                    {{ $staffShare }},
                     {{ $radiologistShare }},
                     {{ $radiographerShare }},
                     {{ $annexShare }},
@@ -124,7 +128,6 @@ function renderReportChart() {
                 backgroundColor: [
                     '#1E4E8C',
                     '#F59E0B',
-                    '#16A34A',
                     '#0F2D5C',
                     '#DC2626',
                     '#10B981',

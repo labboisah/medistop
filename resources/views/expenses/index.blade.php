@@ -32,6 +32,7 @@
             <th>Amount</th>
             <th>Date</th>
             <th>Recorded By</th>
+            <th>Status</th>
             <th class="text-right">Action</th>
         </tr>
     </thead>
@@ -45,6 +46,11 @@
             </td>
             <td>{{ $expense->expense_date }}</td>
             <td>{{ $expense->user->name }}</td>
+            <td>
+                <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $expense->approval_status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">
+                    {{ ucfirst($expense->approval_status) }}
+                </span>
+            </td>
             <td class="text-right space-x-3">
                 <a href="{{ route('expenses.edit',$expense) }}"
                    class="text-blue-600">Edit</a>

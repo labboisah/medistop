@@ -6,7 +6,7 @@
 <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
     <div>
         <h2 class="text-xl font-bold text-primary">Expense Ledger</h2>
-        <p class="text-sm text-gray-500">Create, search, and report all operational expenses.</p>
+        <p class="text-sm text-gray-500">Review expense submissions. Only approved expenses count toward financial calculations.</p>
     </div>
 
     <a href="{{ route('admin.expenses.create') }}"
@@ -33,7 +33,7 @@
 </div>
 
 <div class="bg-white rounded-xl shadow p-6 mb-6">
-    <form method="GET" action="{{ route('admin.expenses.index') }}" class="grid md:grid-cols-5 gap-4">
+    <form method="GET" action="{{ route('admin.expenses.index') }}" class="grid md:grid-cols-6 gap-4">
         <input type="text" name="search" value="{{ request('search') }}"
                placeholder="Search title, category, user"
                oninput="clearTimeout(this._filterTimer); this._filterTimer = setTimeout(() => this.form.requestSubmit(), 400)"
@@ -65,7 +65,13 @@
             @endforeach
         </select>
 
-        <div class="md:col-span-4 flex flex-wrap gap-3">
+        <select name="status" onchange="this.form.requestSubmit()" class="px-4 py-3 border rounded-xl">
+            <option value="">All statuses</option>
+            <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending approval</option>
+            <option value="approved" {{ request('status') === 'approved' ? 'selected' : '' }}>Approved</option>
+        </select>
+
+        <div class="md:col-span-6 flex flex-wrap gap-3">
             <button class="bg-primary text-white px-5 py-3 rounded-xl font-semibold">
                 Search
             </button>
@@ -112,6 +118,8 @@
                 <th>Amount</th>
                 <th>Date</th>
                 <th>Recorded By</th>
+                <th>Status</th>
+                <th>Approval</th>
             </tr>
         </thead>
         <tbody>
@@ -123,10 +131,25 @@
                 <td class="text-red-600 font-semibold">NGN {{ number_format($expense->amount, 2) }}</td>
                 <td>{{ \Carbon\Carbon::parse($expense->expense_date)->format('d M Y') }}</td>
                 <td>{{ optional($expense->user)->name ?? 'Unknown' }}</td>
+                <td>
+                    <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $expense->approval_status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">
+                        {{ ucfirst($expense->approval_status) }}
+                    </span>
+                </td>
+                <td>
+                    @if($expense->approval_status !== 'approved')
+                        <form method="POST" action="{{ route('admin.expenses.approve', $expense) }}">
+                            @csrf
+                            <button class="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white">Approve</button>
+                        </form>
+                    @else
+                        <span class="text-xs text-gray-500">{{ optional($expense->approver)->name ?? 'Approved' }}</span>
+                    @endif
+                </td>
             </tr>
         @empty
             <tr>
-                <td colspan="6" class="py-8 text-center text-gray-500">No expenses found.</td>
+                <td colspan="8" class="py-8 text-center text-gray-500">No expenses found.</td>
             </tr>
         @endforelse
         </tbody>

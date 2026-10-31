@@ -95,6 +95,7 @@ Route::middleware(['auth', 'admin'])
     Route::get('expenses', [ExpenseController::class, 'adminIndex'])->name('expenses.index');
     Route::get('expenses/create', [ExpenseController::class, 'adminCreate'])->name('expenses.create');
     Route::post('expenses', [ExpenseController::class, 'adminStore'])->name('expenses.store');
+    Route::post('expenses/{expense}/approve', [ExpenseController::class, 'approve'])->name('expenses.approve');
     Route::resource('salaries', SalaryController::class)->only(['index', 'store', 'destroy']);
     Route::get('staff-reports', [AdminStaffReportController::class, 'index'])->name('staff-reports.index');
     Route::get('staff-reports/download', [AdminStaffReportController::class, 'download'])->name('staff-reports.download');
@@ -193,6 +194,9 @@ Route::middleware(['auth', 'staff'])
                 Route::get('/images/{image}/download', [StaffResultController::class, 'downloadImage'])->name('images.download');
                 Route::get('/reports', [StaffResultController::class, 'reports'])->name('reports');
                 Route::get('/commission', [StaffResultController::class, 'commission'])->name('commission');
-                Route::get('/{result}/print', [StaffResultController::class, 'print'])->name('print');
             });
     });
+
+Route::middleware('auth')
+    ->get('/staff/results/{result}/print', [StaffResultController::class, 'print'])
+    ->name('staff.results.print');

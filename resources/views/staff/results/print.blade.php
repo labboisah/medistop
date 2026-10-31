@@ -68,11 +68,28 @@
             width: fit-content;
         }
         .top-meta {
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 82mm;
+            align-items: start;
+            gap: 8mm;
             font-size: 13px;
-            margin-bottom: 18px;
+            margin-bottom: 10px;
+        }
+        .patient-details p {
+            margin: 3px 0;
+        }
+        .patient-xray-images {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 2mm;
+            align-items: start;
+        }
+        .patient-xray-images img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 58mm;
+            object-fit: contain;
         }
         .meta {
             display: grid;
@@ -82,19 +99,20 @@
             margin-bottom: 24px;
         }
         .section {
-            margin-top: 15px;
+            margin-top: 10px;
         }
         .section h3 {
             color: #0F2D5C;
             border-bottom: 1px solid #d1d5db;
-            padding-bottom: 8px;
-            font-size: 15px;
+            padding-bottom: 5px;
+            margin-bottom: 7px;
+            font-size: 14px;
             text-transform: uppercase;
         }
         .content {
             white-space: pre-line;
-            line-height: 1.7;
-            font-size: 14px;
+            line-height: 1.45;
+            font-size: 13px;
         }
         .image-grid {
             display: grid;
@@ -107,7 +125,7 @@
             object-fit: contain;
         }
         .signature {
-            margin-top: 60px;
+            margin-top: 22px;
             display: flex;
             justify-content: space-between;
             gap: 40px;
@@ -136,6 +154,10 @@
             text-decoration: none;
         }
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
             body {
                 background: white;
             }
@@ -146,15 +168,34 @@
                 margin: 0;
                 width: auto;
                 min-height: auto;
-                padding: 16mm;
+                padding: 0;
                 overflow: visible;
             }
+            .header {
+                margin-bottom: 10px;
+                padding-bottom: 8px;
+            }
+            .brand { font-size: 21px; }
+            .sub-brand { font-size: 15px; }
+            .address { font-size: 10px; }
+            .report-title { margin-top: 8px; font-size: 13px; padding: 5px 14px; }
+            .section { margin-top: 8px; }
+            .signature { margin-top: 16px; }
         }
     </style>
 </head>
 <body>
     <div class="actions">
-        <a href="{{ route('staff.results.reports') }}">Back to Reports</a>
+        @if(auth()->user()->role === 'user')
+            <a href="{{ route('investigation-requests.show', $result->bill) }}">Back to Investigation</a>
+        @else
+            <a href="{{ route('staff.results.reports') }}">Back to Reports</a>
+        @endif
+        @if((auth()->user()->staff_type ?? null) === 'radiologist'
+            && $result->billItem->service->is_xray
+            && (int) $result->radiologist_id === (int) auth()->id())
+            <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}">Edit Report</a>
+        @endif
         <button onclick="window.print()">Print Result</button>
     </div>
 
@@ -170,14 +211,24 @@
                 <div class="report-title">DIAGNOSTIC REPORT</div>
             </div>
 
+            @php($isXray = (bool) $result->billItem->service->is_xray)
             <div class="top-meta">
-                <div>
-                    <p style="margin-top: 3px;"><strong>Patient:</strong> {{ $result->bill->patient_name ?? 'Walk-in' }}</p>
-                    <p style="margin-top: 3px;"><strong>Gender:</strong> {{ $result->bill->gender ?? 'N/A' }}</p>
-                    <p style="margin-top: 3px;"><strong>Age:</strong> {{ $result->bill->age ?? 'N/A' }}</p>
-                    <p style="margin-top: 3px;"><strong>Category:</strong> {{ optional($result->billItem->service->category)->name ?? 'N/A' }}</p>
-                    <p style="margin-top: 3px;"><strong>Investigation:</strong> {{ $result->billItem->service->name }}</p>
+                <div class="patient-details">
+                    <p><strong>Patient:</strong> {{ $result->bill->patient_name ?? 'Walk-in' }}</p>
+                    <p><strong>Gender:</strong> {{ $result->bill->gender ?? 'N/A' }}</p>
+                    <p><strong>Age:</strong> {{ $result->bill->age ?? 'N/A' }}</p>
+                    <p><strong>Category:</strong> {{ optional($result->billItem->service->category)->name ?? 'N/A' }}</p>
+                    <p><strong>Investigation:</strong> {{ $result->billItem->service->name }}</p>
                 </div>
+                @if($isXray && $result->images->isNotEmpty())
+                    <div class="patient-xray-images" aria-label="X-Ray image">
+                        @foreach($result->images as $image)
+                            @if(str_starts_with(strtolower($image->mime_type ?? ''), 'image/'))
+                                <img src="{{ route('staff.results.images.view', $image) }}" alt="{{ $image->original_name }}">
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
             </div>
 
             @if($result->clinical_note)
@@ -198,7 +249,7 @@
                 </section>
             @endif
 
-            @if($result->images->isNotEmpty())
+            @if(! $isXray && $result->images->isNotEmpty())
                 <section class="section">
                     <h3>Imaging Attachments</h3>
                     <div class="image-grid">

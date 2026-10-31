@@ -43,7 +43,7 @@ class FinanceController extends Controller
         $todayStaffShare = $todayNetRevenue * 0.4;
         $todayAnnexShare = $todayNetRevenue * 0.6;
 
-        $todayExpenses = \App\Models\Expense::where('expense_date', today()->toDateString())
+        $todayExpenses = \App\Models\Expense::approved()->where('expense_date', today()->toDateString())
                             ->sum('amount');
 
         $todayProfit = $todayAnnexShare - $todayExpenses;
@@ -68,7 +68,7 @@ class FinanceController extends Controller
         $monthAnnexShare = $monthNetRevenue * 0.6;
         
 
-        $monthExpenses = \App\Models\Expense::where('expense_date', '>=', $monthStart->toDateString())
+        $monthExpenses = \App\Models\Expense::approved()->where('expense_date', '>=', $monthStart->toDateString())
                             ->where('expense_date', '<', $nextMonth->toDateString())
                             ->sum('amount');
 

@@ -38,7 +38,7 @@ class Summary implements FromArray, WithEvents, WithDrawings
     public function array(): array
     {
         $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$this->from,$this->to]);
-        $expensesQuery = Expense::whereBetween('expense_date', [$this->from,$this->to]);
+        $expensesQuery = Expense::approved()->whereBetween('expense_date', [$this->from,$this->to]);
         $refundsQuery = BillRefund::whereBetween('created_at', [$this->from,$this->to]);
 
         if (!$this->isAdmin) {
@@ -55,7 +55,6 @@ class Summary implements FromArray, WithEvents, WithDrawings
         $discount = $bills->sum('discount_amount');
         $net = $gross - $discount - $refundsTotal;
 
-        $staffShare = 0;
         $annexShare = 0;
         $radiologistShare = 0;
         $radiographerShare = 0;
@@ -63,7 +62,6 @@ class Summary implements FromArray, WithEvents, WithDrawings
             foreach ($bill->items as $item) {
                 $distribution = $item->revenueDistribution;
                 if ($distribution) {
-                    $staffShare += $distribution->staff_amount;
                     $annexShare += $distribution->annex_amount;
                     $radiologistShare += $distribution->radiologist_amount;
                     $radiographerShare += $distribution->radiographer_amount;
@@ -88,7 +86,6 @@ class Summary implements FromArray, WithEvents, WithDrawings
             ['Discount', $discount],
             ['Refunds', $refundsTotal],
             ['Net Revenue', $net],
-            ['Staff Share', $staffShare],
             ['Annex Share', $annexShare],
             ['Radiologist Share', $radiologistShare],
             ['Radiographer Share', $radiographerShare],

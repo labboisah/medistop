@@ -30,7 +30,7 @@
             $lockedByOtherReporter = $result && $result->reported_by && $result->reported_by !== auth()->id();
         @endphp
 
-        <div class="bg-white p-6 rounded-2xl shadow">
+        <div id="bill-item-{{ $item->id }}" class="bg-white p-6 rounded-2xl shadow">
             <div class="flex flex-wrap gap-3 justify-between mb-5">
                 <div>
                     <h3 class="text-xl font-bold text-primary">{{ $item->service->name }}</h3>

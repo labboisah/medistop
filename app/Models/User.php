@@ -70,7 +70,7 @@ class User extends Authenticatable
             ->where('created_at', '<', $tomorrow)
             ->sum('amount');
 
-        $todayExpenses = Expense::where('expense_date', today()->toDateString())
+        $todayExpenses = Expense::approved()->where('expense_date', today()->toDateString())
             ->sum('amount');
 
         $todayOutstanding = Bill::where('created_at', '>=', $todayStart)
@@ -91,7 +91,7 @@ class User extends Authenticatable
             ->where('created_at', '<', $nextMonth)
             ->sum('amount');
 
-        $monthExpenses = Expense::where('expense_date', '>=', $monthStart->toDateString())
+        $monthExpenses = Expense::approved()->where('expense_date', '>=', $monthStart->toDateString())
             ->where('expense_date', '<', $nextMonth->toDateString())
             ->sum('amount');
 
@@ -141,7 +141,7 @@ class User extends Authenticatable
         $todayRadiographerShare = $todayShares['radiographer'];
         $todayRadiologistShare = $todayShares['radiologist'];
 
-        $todayExpenses = Expense::where('expense_date', today()->toDateString())->sum('amount');
+        $todayExpenses = Expense::approved()->where('expense_date', today()->toDateString())->sum('amount');
 
         $todayRefunds = 0;
 
@@ -166,7 +166,7 @@ class User extends Authenticatable
         $monthRadiographerShare = $monthShares['radiographer'];
         $monthRadiologistShare = $monthShares['radiologist'];
 
-        $monthExpenses = Expense::where('expense_date', '>=', $monthStart->toDateString())
+        $monthExpenses = Expense::approved()->where('expense_date', '>=', $monthStart->toDateString())
             ->where('expense_date', '<', $nextMonth->toDateString())
             ->sum('amount');
 

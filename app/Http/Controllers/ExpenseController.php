@@ -31,7 +31,7 @@ class ExpenseController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $todayTotal = Expense::whereDate('expense_date', today())
+        $todayTotal = Expense::approved()->whereDate('expense_date', today())
             ->sum('amount');
 
         return view('expenses.index', compact('expenses', 'todayTotal', 'search', 'from', 'to'));
@@ -56,7 +56,8 @@ class ExpenseController extends Controller
             'amount' => $request->amount,
             'category' => $request->category,
             'expense_date' => $request->expense_date,
-            'user_id' => auth()->id()
+            'user_id' => auth()->id(),
+            'approval_status' => 'pending',
         ]);
 
         return redirect()
@@ -77,7 +78,11 @@ class ExpenseController extends Controller
             'expense_date' => 'required|date'
         ]);
 
-        $expense->update($request->all());
+        $expense->update($request->only(['title', 'description', 'amount', 'category', 'expense_date']) + [
+            'approval_status' => 'pending',
+            'approved_by' => null,
+            'approved_at' => null,
+        ]);
 
         return redirect()
             ->route('expenses.index')
@@ -103,9 +108,10 @@ class ExpenseController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        $totalAmount = (clone $query)->sum('amount');
-        $todayTotal = Expense::whereDate('expense_date', today())->sum('amount');
-        $categoryTotals = (clone $query)
+        $approvedQuery = (clone $query)->approved();
+        $totalAmount = (clone $approvedQuery)->sum('amount');
+        $todayTotal = Expense::approved()->whereDate('expense_date', today())->sum('amount');
+        $categoryTotals = (clone $approvedQuery)
             ->selectRaw('COALESCE(category, "Uncategorized") as category_name, SUM(amount) as total')
             ->groupBy('category_name')
             ->orderByDesc('total')
@@ -149,6 +155,9 @@ class ExpenseController extends Controller
             'category' => $request->category,
             'expense_date' => $request->expense_date,
             'user_id' => auth()->id(),
+            'approval_status' => 'approved',
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
         ]);
 
         return redirect()
@@ -156,9 +165,20 @@ class ExpenseController extends Controller
             ->with('success', 'Expense recorded successfully.');
     }
 
+    public function approve(Expense $expense)
+    {
+        $expense->update([
+            'approval_status' => 'approved',
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+        ]);
+
+        return redirect()->route('admin.expenses.index')->with('success', 'Expense approved and included in calculations.');
+    }
+
     public function adminReport(Request $request)
     {
-        $query = $this->adminExpenseQuery($request);
+        $query = $this->adminExpenseQuery($request)->approved();
 
         $expenses = (clone $query)
             ->latest('expense_date')
@@ -195,7 +215,7 @@ class ExpenseController extends Controller
 
     public function adminDownloadCsv(Request $request)
     {
-        $expenses = $this->adminExpenseQuery($request)
+        $expenses = $this->adminExpenseQuery($request)->approved()
             ->latest('expense_date')
             ->latest()
             ->get();
@@ -224,7 +244,7 @@ class ExpenseController extends Controller
 
     private function adminExpenseQuery(Request $request)
     {
-        return Expense::with('user')
+        return Expense::with('user', 'approver')
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = $request->search;
 
@@ -249,6 +269,9 @@ class ExpenseController extends Controller
             })
             ->when($request->filled('user_id'), function ($query) use ($request) {
                 $query->where('user_id', $request->user_id);
+            })
+            ->when(in_array($request->query('status'), ['pending', 'approved'], true), function ($query) use ($request) {
+                $query->where('approval_status', $request->query('status'));
             });
     }
 }

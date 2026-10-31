@@ -38,6 +38,15 @@ class BillItem extends Model
     }
 
     function finalAmount() {
-        return $this->price - $this->bill->discount_amount;
+        $billTotal = (float) ($this->bill->total_amount ?? 0);
+        $discount = (float) ($this->bill->discount_amount ?? 0);
+
+        if ($billTotal <= 0 || $discount <= 0) {
+            return (float) $this->price;
+        }
+
+        // Allocate a bill-level discount proportionally so service shares are
+        // calculated from the discounted service amount.
+        return round((float) $this->price - ((float) $this->price / $billTotal * $discount), 2);
     }
 }

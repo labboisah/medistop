@@ -92,7 +92,7 @@ class ReportController extends Controller
         $users = User::orderBy('name')->get();
 
         $billsQuery = Bill::with('items.revenueDistribution','user')->whereBetween('created_at', [$from,$to]);
-        $expensesQuery = Expense::whereBetween('expense_date', [$from,$to]);
+        $expensesQuery = Expense::approved()->whereBetween('expense_date', [$from,$to]);
         $refundsQuery = BillRefund::whereBetween('created_at', [$from,$to]);
 
         if ($this->isAdmin() && $selectedUserId) {
@@ -280,13 +280,13 @@ class ReportController extends Controller
 
             $file = fopen('php://output','w');
 
-            fputcsv($file, ['Gross','Discount','Refunds','Net','Staff Share','Annex Share','Radiologist Share','Radiographer Share','Expenses','Salary','Total Outflow','Profit']);
+            fputcsv($file, ['Gross','Discount','Refunds','Net','Annex Share','Radiologist Share','Radiographer Share','Expenses','Salary','Total Outflow','Profit']);
 
             // Calculate data
             $from = $request->from;
             $to = $request->to;
             $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$from,$to]);
-            $expensesQuery = Expense::whereBetween('expense_date', [$from,$to]);
+            $expensesQuery = Expense::approved()->whereBetween('expense_date', [$from,$to]);
             $refundsQuery = BillRefund::whereBetween('created_at', [$from,$to]);
             
             // If not admin, only export own data
@@ -326,7 +326,7 @@ class ReportController extends Controller
             $totalOutflow = $totalExpense + $salaryAmount + $refundsTotal;
             $profit = $annexShare - $totalOutflow;
 
-            fputcsv($file, [$gross, $discount, $refundsTotal, $net, $staffShare, $annexShare, $radiologistShare, $radiographerShare, $totalExpense, $salaryAmount, $totalOutflow, $profit]);
+            fputcsv($file, [$gross, $discount, $refundsTotal, $net, $annexShare, $radiologistShare, $radiographerShare, $totalExpense, $salaryAmount, $totalOutflow, $profit]);
 
             fclose($file);
         };
@@ -357,7 +357,7 @@ class ReportController extends Controller
         $to = $request->to;
 
         $billsQuery = Bill::with('items.revenueDistribution')->whereBetween('created_at', [$from,$to]);
-        $expensesQuery = Expense::whereBetween('expense_date', [$from,$to]);
+        $expensesQuery = Expense::approved()->whereBetween('expense_date', [$from,$to]);
         $refundsQuery = BillRefund::whereBetween('created_at', [$from,$to]);
         
         // If not admin, only export own data

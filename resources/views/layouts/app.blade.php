@@ -201,6 +201,7 @@
                 </a>
                 @endif
 
+                @if((auth()->user()->staff_type ?? '') !== 'radiographer')
                 <a href="{{ route('staff.results.other') }}"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition
                 {{ request()->routeIs('staff.results.other*') || (request()->routeIs('staff.results.entry') && request()->query('workflow') === 'other') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
@@ -210,6 +211,7 @@
                     </svg>
                     <span>Other Result Reporting</span>
                 </a>
+                @endif
 
                 <a href="{{ route('staff.results.reports') }}"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition

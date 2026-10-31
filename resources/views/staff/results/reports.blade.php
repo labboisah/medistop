@@ -60,6 +60,11 @@
                     <td class="py-3 px-4 text-right">
                         @if($result->reported_at)
                             <a href="{{ route('staff.results.print', $result) }}" class="text-primary hover:underline">Print</a>
+                            @if($staffType === 'radiologist'
+                                && $result->billItem->service->is_xray
+                                && (int) $result->radiologist_id === (int) auth()->id())
+                                <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}" class="ml-3 font-semibold text-accent hover:underline">Edit report</a>
+                            @endif
                         @else
                             <span class="text-gray-500">Awaiting radiologist</span>
                         @endif

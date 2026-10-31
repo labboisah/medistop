@@ -362,7 +362,7 @@ class AdminStaffReportController extends Controller
             ->groupBy('report_date', 'user_id')
             ->get();
 
-        $expenses = Expense::with('user')
+        $expenses = Expense::approved()->with('user')
             ->selectRaw('DATE(expense_date) as report_date, user_id, SUM(amount) as expenses')
             ->whereBetween('expense_date', [$from, $to])
             ->when($userId, fn ($query) => $query->where('user_id', $userId))

@@ -32,13 +32,20 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead class="border-b bg-gray-50">
-                    <tr><th class="px-5 py-3">Investigation</th><th class="px-5 py-3 text-right">Amount</th></tr>
+                    <tr><th class="px-5 py-3">Investigation</th><th class="px-5 py-3 text-right">Amount</th><th class="px-5 py-3 text-right">Report</th></tr>
                 </thead>
                 <tbody>
                     @foreach($bill->items as $item)
                         <tr class="border-b">
                             <td class="px-5 py-3">{{ $item->service->name }}</td>
                             <td class="px-5 py-3 text-right">NGN {{ number_format($item->price, 2) }}</td>
+                            <td class="px-5 py-3 text-right">
+                                @if($item->service->is_xray && $item->result?->reported_at)
+                                    <a href="{{ route('staff.results.print', $item->result) }}" class="rounded-lg bg-primary px-3 py-2 font-semibold text-white">View / Print X-Ray Report</a>
+                                @else
+                                    <span class="text-sm text-gray-500">{{ $item->service->is_xray ? 'Report pending' : '—' }}</span>
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

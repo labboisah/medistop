@@ -80,14 +80,13 @@
 
     @if(isset($userBreakdown) && $userBreakdown)
         <div class="bg-white rounded-2xl shadow p-6 overflow-x-auto mb-6">
-            <h3 class="text-lg font-bold mb-4">User Income Breakdown</h3>
+            <h3 class="text-lg font-bold text-primary mb-4">User Income Breakdown</h3>
             <table class="w-full text-left text-sm">
                 <thead class="border-b">
                     <tr>
                         <th class="py-3">User</th>
                         <th>Gross</th>
                         <th>Net</th>
-                        <th>Staff Share</th>
                         <th>Annex Share</th>
                         <th>Radiologist Share</th>
                         <th>Radiographer Share</th>
@@ -102,7 +101,6 @@
                             <td class="py-3 font-semibold">{{ $userData['user_name'] ?? 'Unknown' }}</td>
                             <td>NGN {{ number_format($userData['gross'], 2) }}</td>
                             <td>NGN {{ number_format($userData['net'], 2) }}</td>
-                            <td>NGN {{ number_format($userData['staff_share'], 2) }}</td>
                             <td>NGN {{ number_format($userData['annex_share'], 2) }}</td>
                             <td>NGN {{ number_format($userData['radiologist_share'], 2) }}</td>
                             <td>NGN {{ number_format($userData['radiographer_share'], 2) }}</td>

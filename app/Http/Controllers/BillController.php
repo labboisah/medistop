@@ -109,11 +109,11 @@ class BillController extends Controller
 
     public function showRequest(Bill $bill)
     {
-        if (auth()->user()->role === 'staff' && $bill->user_id !== auth()->id()) {
+        if (auth()->user()->role === 'user' && $bill->user_id !== auth()->id()) {
             abort(403, 'You can only view investigation requests you registered.');
         }
 
-        $bill->load('items.service', 'user', 'payments.user');
+        $bill->load('items.service', 'items.result', 'user', 'payments.user');
 
         return view('investigation-requests.show', compact('bill'));
     }
@@ -200,6 +200,18 @@ class BillController extends Controller
             'balance' => $finalAmount,
             'payment_status' => 'unpaid',
         ]);
+
+        // The bill discount is known only after all services have been added.
+        // Recalculate persisted distributions from each service's net amount.
+        foreach ($bill->items()->with('service')->get() as $billItem) {
+            $shares = \App\Services\RevenueCalculator::calculate($billItem->service, $billItem->finalAmount());
+            $billItem->revenueDistribution()->updateOrCreate([], [
+                'radiologist_amount' => $shares['radiologist'],
+                'radiographer_amount' => $shares['radiographer'],
+                'staff_amount' => $shares['staff'],
+                'annex_amount' => $shares['annex'],
+            ]);
+        }
 
         if ($requestMode) {
             return redirect()->route('investigation-requests.show', $bill)
