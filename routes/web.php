@@ -62,7 +62,7 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__.'/auth.php';
 
-Route::middleware('auth')
+Route::middleware(['auth', 'user'])
     ->prefix('investigation-requests')
     ->name('investigation-requests.')
     ->group(function () {

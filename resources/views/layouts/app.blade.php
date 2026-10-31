@@ -81,13 +81,15 @@
                 <span>Dashboard</span>
             </a>
 
-            <a href="{{ route('investigation-requests.index') }}"
-            class="flex items-center gap-3 rounded-lg px-4 py-2 transition {{ request()->routeIs('investigation-requests.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
-                <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14" />
-                </svg>
-                <span>Investigation Request</span>
-            </a>
+            @if(auth()->user()->role === 'user')
+                <a href="{{ route('investigation-requests.index') }}"
+                class="flex items-center gap-3 rounded-lg px-4 py-2 transition {{ request()->routeIs('investigation-requests.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+                    <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14" />
+                    </svg>
+                    <span>Investigation Request</span>
+                </a>
+            @endif
 
 
             @if(auth()->user()->role == 'user')
