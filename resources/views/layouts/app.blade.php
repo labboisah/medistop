@@ -389,6 +389,14 @@
 
                     <span>Performance Audit</span>
                 </a>
+
+                <a href="{{ route('admin.performance.index') }}"
+                class="flex items-center gap-3 rounded-lg px-4 py-2 transition {{ request()->routeIs('admin.performance.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+                    <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3v18h18M7 14l4-4 4 4 6-7" />
+                    </svg>
+                    <span>Production Performance</span>
+                </a>
             @endif
 
         </nav>

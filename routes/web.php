@@ -16,6 +16,7 @@ use App\Http\Controllers\AdminStaffReportController;
 use App\Http\Controllers\DatabaseBackupController;
 use App\Http\Controllers\LocalServerController;
 use App\Http\Controllers\PublicInvestigationBookingController;
+use App\Http\Controllers\AdminPerformanceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -100,6 +101,8 @@ Route::middleware(['auth', 'admin'])
     Route::get('staff-performance', [AdminStaffReportController::class, 'performance'])->name('staff-performance.index');
     Route::get('staff-performance/download', [AdminStaffReportController::class, 'downloadPerformance'])->name('staff-performance.download');
     Route::post('database/backup', [DatabaseBackupController::class, 'backup'])->name('database.backup');
+    Route::get('performance', [AdminPerformanceController::class, 'index'])->name('performance.index');
+    Route::get('performance/export', [AdminPerformanceController::class, 'export'])->name('performance.export');
 
     Route::prefix('reports')
         ->name('reports.')
