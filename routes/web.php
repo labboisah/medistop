@@ -184,7 +184,9 @@ Route::middleware(['auth', 'staff'])
             ->name('results.')
             ->group(function () {
                 Route::get('/', [StaffResultController::class, 'index'])->name('index');
+                Route::get('/other', [StaffResultController::class, 'otherResults'])->name('other');
                 Route::post('/lookup', [StaffResultController::class, 'lookup'])->name('lookup');
+                Route::post('/other/lookup', [StaffResultController::class, 'lookupOther'])->name('other.lookup');
                 Route::get('/bills/{bill}', [StaffResultController::class, 'entry'])->name('entry');
                 Route::post('/bills/{bill}', [StaffResultController::class, 'store'])->name('store');
                 Route::get('/images/{image}', [StaffResultController::class, 'viewImage'])->name('images.view');

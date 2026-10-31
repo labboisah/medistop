@@ -180,9 +180,10 @@
             @endif
 
             @if(auth()->user()->role == 'staff')
+                @if(in_array(auth()->user()->staff_type ?? '', ['radiologist', 'radiographer'], true))
                 <a href="{{ route('staff.results.index') }}"
                 class="flex items-center gap-3 px-4 py-2 rounded-lg transition
-                {{ request()->routeIs('staff.results.index') || request()->routeIs('staff.results.entry') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+                {{ request()->routeIs('staff.results.index') || (request()->routeIs('staff.results.entry') && request()->query('workflow') !== 'other') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
 
                     <svg class="w-5 h-5 text-accent"
                         fill="none"
@@ -195,6 +196,17 @@
                     </svg>
 
                     <span>{{ (auth()->user()->staff_type ?? '') === 'radiologist' ? 'X-Ray Reporting' : ((auth()->user()->staff_type ?? '') === 'radiographer' ? 'X-Ray Imaging' : 'Result Reporting') }}</span>
+                </a>
+                @endif
+
+                <a href="{{ route('staff.results.other') }}"
+                class="flex items-center gap-3 px-4 py-2 rounded-lg transition
+                {{ request()->routeIs('staff.results.other*') || (request()->routeIs('staff.results.entry') && request()->query('workflow') === 'other') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+
+                    <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h8m-8 4h8m-8 4h5m-9 5h14a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>Other Result Reporting</span>
                 </a>
 
                 <a href="{{ route('staff.results.reports') }}"

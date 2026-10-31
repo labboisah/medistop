@@ -16,7 +16,7 @@
             @endif
         </p>
     </div>
-    <a href="{{ route('staff.results.index') }}" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-accent px-5 py-3 font-semibold text-white hover:bg-green-600">
+    <a href="{{ in_array($staffType, ['radiographer', 'radiologist'], true) ? route('staff.results.index') : route('staff.results.other') }}" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-accent px-5 py-3 font-semibold text-white hover:bg-green-600">
         @if($staffType === 'radiographer')
             Open X-Ray Imaging Worklist
         @elseif($staffType === 'radiologist')

@@ -142,7 +142,22 @@ class StaffResultController extends Controller
         return view('staff.results.index');
     }
 
+    public function otherResults()
+    {
+        return view('staff.results.other-index');
+    }
+
     public function lookup(Request $request)
+    {
+        return $this->processBillLookup($request, false);
+    }
+
+    public function lookupOther(Request $request)
+    {
+        return $this->processBillLookup($request, true);
+    }
+
+    private function processBillLookup(Request $request, bool $otherResultsOnly)
     {
         $request->validate([
             'bill_no' => 'required|string',
@@ -160,10 +175,10 @@ class StaffResultController extends Controller
 
         $staffType = auth()->user()->staff_type ?? 'staff';
         $eligibleItems = $bill->items()
-            ->where(function ($items) use ($staffType) {
+            ->where(function ($items) use ($staffType, $otherResultsOnly) {
                 $items->whereHas('service', fn ($service) => $service->where('is_xray', false));
 
-                if ($staffType === 'radiographer') {
+                if (! $otherResultsOnly && $staffType === 'radiographer') {
                     $items->orWhere(function ($xrayItems) {
                         $xrayItems->whereHas('service', fn ($service) => $service->where('is_xray', true))
                             ->where(function ($work) {
@@ -171,7 +186,7 @@ class StaffResultController extends Controller
                                 ->orWhereHas('result', fn ($result) => $result->where('performed_by', auth()->id()));
                         });
                     });
-                } elseif ($staffType === 'radiologist') {
+                } elseif (! $otherResultsOnly && $staffType === 'radiologist') {
                     $items->orWhere(function ($xrayItems) {
                         $xrayItems->whereHas('service', fn ($service) => $service->where('is_xray', true))
                             ->whereHas('result', fn ($result) => $result->where('radiologist_id', auth()->id()));
@@ -181,14 +196,15 @@ class StaffResultController extends Controller
             ->exists();
 
         if (! $eligibleItems) {
-            $message = match ($staffType) {
-                default => 'This bill has no non-X-Ray investigation for direct result entry or X-Ray work available to your account.',
-            };
-
+            $message = $otherResultsOnly
+                ? 'This bill has no non-X-Ray investigation available for direct result entry.'
+                : 'This bill has no non-X-Ray investigation for direct result entry or X-Ray work available to your account.';
             return back()->withInput()->withErrors(['bill_no' => $message]);
         }
 
-        return redirect()->route('staff.results.entry', $bill);
+        return redirect()->route('staff.results.entry', $otherResultsOnly
+            ? ['bill' => $bill, 'workflow' => 'other']
+            : ['bill' => $bill]);
     }
 
     public function entry(Bill $bill)
@@ -206,7 +222,11 @@ class StaffResultController extends Controller
         ]);
 
         $staffType = auth()->user()->staff_type ?? 'staff';
-        if ($staffType === 'radiologist') {
+        if (request()->query('workflow') === 'other') {
+            $otherItems = $bill->items->reject(fn ($item) => $item->service->is_xray)->values();
+            abort_if($otherItems->isEmpty(), 403, 'This bill has no non-X-Ray investigation available for direct result entry.');
+            $bill->setRelation('items', $otherItems);
+        } elseif ($staffType === 'radiologist') {
             $assignedItems = $bill->items->filter(fn ($item) =>
                 ! $item->service->is_xray
                 || (int) ($item->result?->radiologist_id ?? 0) === (int) auth()->id()
