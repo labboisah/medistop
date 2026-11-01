@@ -574,7 +574,23 @@ class StaffResultController extends Controller
             'images',
         ]);
 
-        return view('staff.results.print', compact('result'));
+        $reporterSignatureDataUri = null;
+        $reporter = $result->reporter;
+        if (
+            $reporter?->role === 'staff'
+            && $reporter->staff_type === 'radiologist'
+            && $reporter->signature_path
+            && Storage::disk('local')->exists($reporter->signature_path)
+        ) {
+            $signatureMimeType = in_array($reporter->signature_mime_type, ['image/png', 'image/jpeg', 'image/webp'], true)
+                ? $reporter->signature_mime_type
+                : 'image/png';
+            $reporterSignatureDataUri = 'data:'.$signatureMimeType.';base64,'.base64_encode(
+                Storage::disk('local')->get($reporter->signature_path)
+            );
+        }
+
+        return view('staff.results.print', compact('result', 'reporterSignatureDataUri'));
     }
 
     private function authorizeImageAccess(BillResultImage $image, bool $allowRequestOwner = false): void

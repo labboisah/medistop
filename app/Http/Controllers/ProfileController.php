@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -16,8 +17,21 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
+        $user = $request->user();
+        $signatureDataUri = null;
+
+        if ($user->signature_path && Storage::disk('local')->exists($user->signature_path)) {
+            $signatureMimeType = in_array($user->signature_mime_type, ['image/png', 'image/jpeg', 'image/webp'], true)
+                ? $user->signature_mime_type
+                : 'image/png';
+            $signatureDataUri = 'data:'.$signatureMimeType.';base64,'.base64_encode(
+                Storage::disk('local')->get($user->signature_path)
+            );
+        }
+
         return view('profile.edit', [
-            'user' => $request->user(),
+            'user' => $user,
+            'signatureDataUri' => $signatureDataUri,
         ]);
     }
 
@@ -26,13 +40,36 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $user->fill($request->safe()->only(['name', 'email']));
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $isRadiologist = $user->role === 'staff' && $user->staff_type === 'radiologist';
+        $disk = Storage::disk('local');
+
+        if ($isRadiologist && $request->boolean('remove_signature') && ! $request->hasFile('signature')) {
+            if ($user->signature_path) {
+                $disk->delete($user->signature_path);
+            }
+
+            $user->signature_path = null;
+            $user->signature_mime_type = null;
+        }
+
+        if ($isRadiologist && $request->hasFile('signature')) {
+            if ($user->signature_path) {
+                $disk->delete($user->signature_path);
+            }
+
+            $signature = $request->file('signature');
+            $user->signature_path = $signature->store('radiologist-signatures', 'local');
+            $user->signature_mime_type = $signature->getMimeType();
+        }
+
+        $user->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
@@ -49,6 +86,10 @@ class ProfileController extends Controller
         $user = $request->user();
 
         Auth::logout();
+
+        if ($user->signature_path) {
+            Storage::disk('local')->delete($user->signature_path);
+        }
 
         $user->delete();
 

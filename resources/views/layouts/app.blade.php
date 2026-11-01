@@ -433,8 +433,16 @@
                 </div>
             </div>
 
+            <a href="{{ route('profile.edit') }}"
+               class="mt-4 flex items-center gap-3 rounded-lg px-4 py-2 transition {{ request()->routeIs('profile.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+                <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0" />
+                </svg>
+                <span>Profile</span>
+            </a>
+
             <!-- Logout -->
-            <form method="POST" action="{{ route('logout') }}" class="mt-4">
+            <form method="POST" action="{{ route('logout') }}" class="mt-2">
                 @csrf
                 <button class="w-full bg-accent text-primary py-2 rounded-lg font-semibold hover:bg-green-500 transition">
                     Logout

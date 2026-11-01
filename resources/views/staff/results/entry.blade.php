@@ -60,7 +60,7 @@
             @if($result?->images->isNotEmpty())
                 <div class="mb-6 rounded-xl bg-lightbg p-4">
                     <h4 class="font-semibold text-primary mb-3">Uploaded imaging</h4>
-                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         @foreach($result->images as $image)
                             <div class="bg-white rounded-lg border p-3">
                                 @if(str_starts_with(strtolower($image->mime_type ?? ''), 'image/'))

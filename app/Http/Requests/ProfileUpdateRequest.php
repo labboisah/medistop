@@ -15,6 +15,9 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isRadiologist = $this->user()->role === 'staff'
+            && $this->user()->staff_type === 'radiologist';
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => [
@@ -25,6 +28,12 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'signature' => $isRadiologist
+                ? ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048']
+                : ['prohibited'],
+            'remove_signature' => $isRadiologist
+                ? ['nullable', 'boolean']
+                : ['prohibited'],
         ];
     }
 }

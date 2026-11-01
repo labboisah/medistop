@@ -80,7 +80,7 @@
         }
         .patient-xray-images {
             display: grid;
-            grid-template-columns: minmax(0, 1fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 2mm;
             align-items: start;
         }
@@ -143,6 +143,13 @@
             padding-top: 8px;
             width: 220px;
             text-align: center;
+        }
+        .reporter-signature {
+            display: block;
+            max-width: 160px;
+            max-height: 54px;
+            margin: 0 auto 6px;
+            object-fit: contain;
         }
         .actions {
             width: 210mm;
@@ -277,7 +284,9 @@
 
             <div class="signature">
                 <div class="line">
-                    
+                    @if($reporterSignatureDataUri)
+                        <img src="{{ $reporterSignatureDataUri }}" alt="Radiologist signature" class="reporter-signature">
+                    @endif
                     {{ optional($result->reporter)->name ?? 'N/A' }}<br>
                     {{optional($result->reporter)->designation ?? 'N/A'}}<br>
                     {{ optional($result->completed_at)->format('d M Y h:i A') }} 
