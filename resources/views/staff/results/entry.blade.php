@@ -149,12 +149,14 @@
 
                     <div>
                         <label class="block text-sm font-medium mb-2">Result Template</label>
-                        <select class="template-select w-full px-4 py-3 border rounded-xl" data-item="{{ $item->id }}">
-                            <option value="">Select saved template</option>
+                        <input type="search" class="template-select w-full px-4 py-3 border rounded-xl"
+                               data-item="{{ $item->id }}" list="template-options-{{ $item->id }}"
+                               placeholder="Search saved templates..." autocomplete="off">
+                        <datalist id="template-options-{{ $item->id }}">
                             @foreach($templates as $template)
-                                <option value="{{ $template->id }}">{{ $template->name }}</option>
+                                <option value="{{ $template->name }}" data-template-id="{{ $template->id }}"></option>
                             @endforeach
-                        </select>
+                        </datalist>
                     </div>
 
                     <div>
@@ -205,10 +207,12 @@
 const resultTemplates = @js($templatePayload);
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.template-select').forEach((select) => {
-        select.addEventListener('change', () => {
-            const template = resultTemplates[String(select.value)];
-            const itemId = select.dataset.item;
+    document.querySelectorAll('.template-select').forEach((input) => {
+        const applyTemplate = () => {
+            const options = document.getElementById(`template-options-${input.dataset.item}`);
+            const option = Array.from(options.options).find((candidate) => candidate.value === input.value);
+            const template = option ? resultTemplates[String(option.dataset.templateId)] : null;
+            const itemId = input.dataset.item;
 
             if (!template) {
                 return;
@@ -217,7 +221,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(`clinical_note_${itemId}`).value = template.clinical_note || '';
             document.getElementById(`findings_${itemId}`).value = template.findings || '';
             document.getElementById(`impression_${itemId}`).value = template.impression || '';
-        });
+        };
+
+        input.addEventListener('change', applyTemplate);
     });
 });
 </script>
