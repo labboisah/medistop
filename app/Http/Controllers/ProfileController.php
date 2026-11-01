@@ -47,10 +47,9 @@ class ProfileController extends Controller
             $user->email_verified_at = null;
         }
 
-        $isRadiologist = $user->role === 'staff' && $user->staff_type === 'radiologist';
         $disk = Storage::disk('local');
 
-        if ($isRadiologist && $request->boolean('remove_signature') && ! $request->hasFile('signature')) {
+        if ($request->boolean('remove_signature') && ! $request->hasFile('signature')) {
             if ($user->signature_path) {
                 $disk->delete($user->signature_path);
             }
@@ -59,13 +58,13 @@ class ProfileController extends Controller
             $user->signature_mime_type = null;
         }
 
-        if ($isRadiologist && $request->hasFile('signature')) {
+        if ($request->hasFile('signature')) {
             if ($user->signature_path) {
                 $disk->delete($user->signature_path);
             }
 
             $signature = $request->file('signature');
-            $user->signature_path = $signature->store('radiologist-signatures', 'local');
+            $user->signature_path = $signature->store('user-signatures', 'local');
             $user->signature_mime_type = $signature->getMimeType();
         }
 

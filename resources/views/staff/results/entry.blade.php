@@ -124,8 +124,9 @@
 
                         <div>
                             <label class="block text-sm font-medium mb-2">Images, PDFs, or DICOM files</label>
-                            <input type="file" name="images[]" multiple required accept="image/*,application/pdf,.pdf,.dcm,.dicom,.zip" class="w-full px-4 py-3 border rounded-xl">
+                            <input type="file" name="images[]" multiple required accept="image/*,application/pdf,.pdf,.dcm,.dicom,.zip" data-imaging-preview="imaging-preview-{{ $item->id }}" class="w-full px-4 py-3 border rounded-xl">
                             <p class="text-xs text-gray-500 mt-2">Upload image files, PDFs, DICOM files, or DICOM ZIP archives (up to 500 MB per file).</p>
+                            <div id="imaging-preview-{{ $item->id }}" class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3" style="display: none"></div>
                             @foreach($errors->getMessages() as $field => $messages)
                                 @if(str_starts_with($field, 'images.'))
                                     @foreach($messages as $message)<p class="text-red-600 text-sm mt-2">{{ $message }}</p>@endforeach
@@ -207,6 +208,53 @@
 const resultTemplates = @js($templatePayload);
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-imaging-preview]').forEach((input) => {
+        const preview = document.getElementById(input.dataset.imagingPreview);
+        let previewUrls = [];
+
+        input.addEventListener('change', () => {
+            previewUrls.forEach((url) => URL.revokeObjectURL(url));
+            previewUrls = [];
+            preview.replaceChildren();
+
+            Array.from(input.files || []).forEach((file) => {
+                const card = document.createElement('div');
+                card.className = 'min-w-0 overflow-hidden rounded-lg border bg-white p-2';
+
+                const filename = document.createElement('p');
+                filename.className = 'mb-2 truncate text-xs text-gray-600';
+                filename.textContent = file.name;
+                card.appendChild(filename);
+
+                const objectUrl = URL.createObjectURL(file);
+                previewUrls.push(objectUrl);
+
+                if (file.type.startsWith('image/')) {
+                    const image = document.createElement('img');
+                    image.src = objectUrl;
+                    image.alt = `Preview of ${file.name}`;
+                    image.className = 'h-40 w-full rounded object-contain';
+                    card.appendChild(image);
+                } else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    const pdf = document.createElement('iframe');
+                    pdf.src = `${objectUrl}#view=Fit&toolbar=0&navpanes=0`;
+                    pdf.title = `PDF preview of ${file.name}`;
+                    pdf.className = 'h-40 w-full rounded border-0';
+                    card.appendChild(pdf);
+                } else {
+                    const fileType = document.createElement('p');
+                    fileType.className = 'flex h-40 items-center justify-center rounded bg-gray-50 text-center text-sm text-gray-500';
+                    fileType.textContent = 'Preview unavailable for this file type';
+                    card.appendChild(fileType);
+                }
+
+                preview.appendChild(card);
+            });
+
+            preview.style.display = input.files?.length ? 'grid' : 'none';
+        });
+    });
+
     document.querySelectorAll('.template-select').forEach((input) => {
         const applyTemplate = () => {
             const options = document.getElementById(`template-options-${input.dataset.item}`);

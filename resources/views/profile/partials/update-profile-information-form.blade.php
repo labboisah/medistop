@@ -55,27 +55,28 @@
             <p class="mt-1">Role, staff type, and designation can only be changed by an administrator.</p>
         </div>
 
-        @if($user->role === 'staff' && $user->staff_type === 'radiologist')
-            <div class="space-y-3">
-                <div>
-                    <x-input-label for="signature" value="Report signature" />
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Upload a PNG, JPG, or WebP image (max 2 MB). It will be included automatically on reports you sign.</p>
-                    <input id="signature" name="signature" type="file" accept="image/png,image/jpeg,image/webp" class="mt-2 block w-full text-sm text-gray-700 dark:text-gray-300">
-                    <x-input-error class="mt-2" :messages="$errors->get('signature')" />
-                </div>
+        <div class="space-y-3">
+            <div>
+                <x-input-label for="signature" value="Signature image" />
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Upload a PNG, JPG, or WebP image (max 2 MB). Radiologist signatures are included automatically on reports.</p>
+                <input id="signature" name="signature" type="file" accept="image/png,image/jpeg,image/webp" class="mt-2 block w-full text-sm text-gray-700 dark:text-gray-300">
+                <x-input-error class="mt-2" :messages="$errors->get('signature')" />
+            </div>
 
+            <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Preview</p>
+                <div class="flex min-h-24 items-center justify-center rounded bg-gray-50 p-3 dark:bg-gray-900">
+                    <img id="signature-preview" src="{{ $signatureDataUri ?? '' }}" alt="Signature preview" class="max-h-24 max-w-full object-contain {{ $signatureDataUri ? '' : 'hidden' }}">
+                    <p id="signature-preview-placeholder" class="text-sm text-gray-500 {{ $signatureDataUri ? 'hidden' : '' }}">Choose an image to preview it here.</p>
+                </div>
                 @if($signatureDataUri)
-                    <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                        <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Current signature</p>
-                        <img src="{{ $signatureDataUri }}" alt="Your saved report signature" class="max-h-24 max-w-full object-contain">
-                        <label class="mt-3 inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                            <input type="checkbox" name="remove_signature" value="1" class="rounded border-gray-300">
-                            Remove current signature
-                        </label>
-                    </div>
+                    <label class="mt-3 inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" id="remove-signature" name="remove_signature" value="1" class="rounded border-gray-300">
+                        Remove current signature
+                    </label>
                 @endif
             </div>
-        @endif
+        </div>
 
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
