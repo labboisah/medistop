@@ -21,7 +21,7 @@
                     <th class="py-3 px-4 text-left">Patient / Bill</th>
                     <th class="py-3 px-4 text-left">Investigation</th>
                     <th class="py-3 px-4 text-left">Sent by</th>
-                    <th class="py-3 px-4 text-left">Images</th>
+                    <th class="py-3 px-4 text-left">Imaging files</th>
                     <th class="py-3 px-4 text-left">Date</th>
                     <th class="py-3 px-4 text-right">Action</th>
                 </tr>
@@ -35,7 +35,19 @@
                         </td>
                         <td class="py-3 px-4">{{ $study->billItem->service->name }}</td>
                         <td class="py-3 px-4">{{ optional($study->performer)->name ?? 'Radiographer' }}</td>
-                        <td class="py-3 px-4">{{ $study->images->count() }}</td>
+                        <td class="py-3 px-4">
+                            <div class="space-y-2">
+                                @forelse($study->images as $image)
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="max-w-40 truncate" title="{{ $image->original_name }}">{{ $image->original_name }}</span>
+                                        <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener" class="text-primary hover:underline">View</a>
+                                        <a href="{{ route('staff.results.images.download', $image) }}" class="text-primary hover:underline">Download</a>
+                                    </div>
+                                @empty
+                                    <span class="text-gray-500">No files attached</span>
+                                @endforelse
+                            </div>
+                        </td>
                         <td class="py-3 px-4">{{ optional($study->performed_at)->format('d M Y h:i A') ?? '—' }}</td>
                         <td class="py-3 px-4 text-right">
                             <a href="{{ route('staff.results.entry', $study->bill) }}" class="inline-block rounded-lg bg-accent px-4 py-2 text-white">Review and report</a>

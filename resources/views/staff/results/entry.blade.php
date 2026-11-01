@@ -67,6 +67,11 @@
                                     <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener">
                                         <img src="{{ route('staff.results.images.view', $image) }}" alt="{{ $image->original_name }}" class="w-full h-48 object-contain rounded">
                                     </a>
+                                @elseif(strtolower($image->mime_type ?? '') === 'application/pdf')
+                                    <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener" class="h-48 flex flex-col items-center justify-center gap-2 rounded bg-red-50 text-red-700 hover:bg-red-100">
+                                        <span class="text-3xl font-bold">PDF</span>
+                                        <span class="text-sm">Open document</span>
+                                    </a>
                                 @else
                                     <div class="h-48 flex items-center justify-center text-sm text-gray-600">{{ $image->original_name }}</div>
                                 @endif
@@ -118,9 +123,9 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium mb-2">Images or DICOM files</label>
-                            <input type="file" name="images[]" multiple required accept="image/*,.dcm,.dicom,.zip" class="w-full px-4 py-3 border rounded-xl">
-                            <p class="text-xs text-gray-500 mt-2">Upload one or more image files, DICOM files, or DICOM ZIP archives (up to 500 MB per file).</p>
+                            <label class="block text-sm font-medium mb-2">Images, PDFs, or DICOM files</label>
+                            <input type="file" name="images[]" multiple required accept="image/*,application/pdf,.pdf,.dcm,.dicom,.zip" class="w-full px-4 py-3 border rounded-xl">
+                            <p class="text-xs text-gray-500 mt-2">Upload image files, PDFs, DICOM files, or DICOM ZIP archives (up to 500 MB per file).</p>
                             @foreach($errors->getMessages() as $field => $messages)
                                 @if(str_starts_with($field, 'images.'))
                                     @foreach($messages as $message)<p class="text-red-600 text-sm mt-2">{{ $message }}</p>@endforeach

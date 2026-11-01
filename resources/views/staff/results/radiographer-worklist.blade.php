@@ -40,7 +40,7 @@
                         $result = $item->result;
                         $statusLabel = ! $result
                             ? 'Awaiting imaging upload'
-                            : ($result->reported_at ? 'Report ready to print' : 'Awaiting radiologist report');
+                            : ($result->reported_at ? 'Report ready to print' : 'X-ray uploaded · Awaiting radiologist report');
                         $statusClass = ! $result
                             ? 'bg-amber-100 text-amber-800'
                             : ($result->reported_at ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800');
@@ -54,7 +54,7 @@
                         <td class="py-3 px-4">
                             <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
                             @if($result)
-                                <div class="mt-1 text-xs text-gray-500">{{ $result->images->count() }} file(s)</div>
+                                <div class="mt-1 text-xs text-gray-500">{{ $result->images->count() }} file(s) uploaded{{ $result->performed_at ? ' · ' . $result->performed_at->format('d M Y h:i A') : '' }}</div>
                             @endif
                         </td>
                         <td class="py-3 px-4">{{ $result?->assignedRadiologist?->name ?? '—' }}</td>

@@ -314,9 +314,10 @@ class StaffResultController extends Controller
                         || in_array($mimeType, ['application/dicom', 'application/dicom+json'], true);
                     $isDicomArchive = $extension === 'zip'
                         || in_array($mimeType, ['application/zip', 'application/x-zip-compressed'], true);
+                    $isPdf = $extension === 'pdf' && $mimeType === 'application/pdf';
 
-                    if (! $isImage && ! $isDicom && ! $isDicomArchive) {
-                        $fail('Upload an image, DICOM file, or DICOM ZIP archive.');
+                    if (! $isImage && ! $isDicom && ! $isDicomArchive && ! $isPdf) {
+                        $fail('Upload an image, PDF, DICOM file, or DICOM ZIP archive.');
                     }
                 },
             ] : 'prohibited',
@@ -425,7 +426,16 @@ class StaffResultController extends Controller
         $disk = Storage::disk('local');
         abort_unless($disk->exists($image->path), 404);
 
-        if (! str_starts_with(strtolower($image->mime_type ?? ''), 'image/')) {
+        $mimeType = strtolower($image->mime_type ?? '');
+        if ($mimeType === 'application/pdf') {
+            return response()->file($disk->path($image->path), [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="'.addcslashes(basename($image->original_name), '"\\').'"',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
+
+        if (! str_starts_with($mimeType, 'image/')) {
             return $this->downloadImage($image);
         }
 

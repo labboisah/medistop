@@ -231,6 +231,34 @@
                 @endif
             </div>
 
+            @if($isXray && $result->images->isNotEmpty())
+                <section class="section">
+                    <h3>Imaging Attachments</h3>
+                    <div class="image-grid">
+                        @foreach($result->images as $image)
+                            @if(strtolower($image->mime_type ?? '') === 'application/pdf')
+                                <p>
+                                    PDF: {{ $image->original_name }} —
+                                    <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener">View PDF</a>
+                                    · <a href="{{ route('staff.results.images.download', $image) }}">Download</a>
+                                </p>
+                            @elseif(str_starts_with(strtolower($image->mime_type ?? ''), 'image/'))
+                                <p>
+                                    {{ $image->original_name }} —
+                                    <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener">View image</a>
+                                    · <a href="{{ route('staff.results.images.download', $image) }}">Download</a>
+                                </p>
+                            @else
+                                <p>
+                                    {{ $image->original_name }} —
+                                    <a href="{{ route('staff.results.images.download', $image) }}">Download</a>
+                                </p>
+                            @endif
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             @if($result->clinical_note)
                 <section class="section">
                     <h3>Clinical Note: {{ $result->clinical_note }}</h3>
