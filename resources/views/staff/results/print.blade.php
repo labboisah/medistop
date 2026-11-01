@@ -91,6 +91,13 @@
             max-height: 58mm;
             object-fit: contain;
         }
+        .patient-xray-images iframe {
+            display: block;
+            width: 100%;
+            height: 58mm;
+            border: 1px solid #d1d5db;
+            background: #f9fafb;
+        }
         .meta {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -225,39 +232,15 @@
                         @foreach($result->images as $image)
                             @if(str_starts_with(strtolower($image->mime_type ?? ''), 'image/'))
                                 <img src="{{ route('staff.results.images.view', $image) }}" alt="{{ $image->original_name }}">
+                            @elseif(strtolower($image->mime_type ?? '') === 'application/pdf')
+                                <div>
+                                    <iframe src="{{ route('staff.results.images.view', $image) }}#view=Fit&toolbar=0&navpanes=0" title="X-ray PDF: {{ $image->original_name }}"></iframe>
+                                </div>
                             @endif
                         @endforeach
                     </div>
                 @endif
             </div>
-
-            @if($isXray && $result->images->isNotEmpty())
-                <section class="section">
-                    <h3>Imaging Attachments</h3>
-                    <div class="image-grid">
-                        @foreach($result->images as $image)
-                            @if(strtolower($image->mime_type ?? '') === 'application/pdf')
-                                <p>
-                                    PDF: {{ $image->original_name }} —
-                                    <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener">View PDF</a>
-                                    · <a href="{{ route('staff.results.images.download', $image) }}">Download</a>
-                                </p>
-                            @elseif(str_starts_with(strtolower($image->mime_type ?? ''), 'image/'))
-                                <p>
-                                    {{ $image->original_name }} —
-                                    <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener">View image</a>
-                                    · <a href="{{ route('staff.results.images.download', $image) }}">Download</a>
-                                </p>
-                            @else
-                                <p>
-                                    {{ $image->original_name }} —
-                                    <a href="{{ route('staff.results.images.download', $image) }}">Download</a>
-                                </p>
-                            @endif
-                        @endforeach
-                    </div>
-                </section>
-            @endif
 
             @if($result->clinical_note)
                 <section class="section">
