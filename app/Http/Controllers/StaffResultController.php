@@ -234,6 +234,28 @@ class StaffResultController extends Controller
         ]);
 
         $staffType = auth()->user()->staff_type ?? 'staff';
+        if ($staffType === 'radiologist') {
+            // A bill item may have legacy result rows from more than one staff
+            // member. Resolve the assigned radiologist's row explicitly so a
+            // different row cannot mask their saved draft in the form.
+            $bill->items->each(function ($item) {
+                if (! $item->service->is_xray) {
+                    return;
+                }
+
+                $assignedResult = BillResult::with([
+                    'performer', 'reporter', 'assignedRadiologist', 'images',
+                ])->where('bill_item_id', $item->id)
+                    ->where('radiologist_id', auth()->id())
+                    ->latest('id')
+                    ->first();
+
+                if ($assignedResult) {
+                    $item->setRelation('result', $assignedResult);
+                }
+            });
+        }
+
         if (request()->query('workflow') === 'other') {
             $otherItems = $bill->items->reject(fn ($item) => $item->service->is_xray)->values();
             abort_if($otherItems->isEmpty(), 403, 'This bill has no non-X-Ray investigation available for direct result entry.');
@@ -286,6 +308,8 @@ class StaffResultController extends Controller
         }
 
         $usesXrayWorkflow = $isXray && $staffType === 'radiographer';
+        $isRadiologistXray = $isXray && $staffType === 'radiologist';
+        $reportAction = $request->input('report_action');
         if ($isXray && ! $usesXrayWorkflow && $staffType !== 'radiologist') {
             abort(403, 'X-Ray results must be handled through the radiographer and assigned radiologist workflow.');
         }
@@ -293,8 +317,9 @@ class StaffResultController extends Controller
         $validated = $request->validate([
             'bill_item_id' => 'required|integer|exists:bill_items,id',
             'clinical_note' => 'nullable|string',
-            'findings' => $usesXrayWorkflow ? 'nullable|string' : 'required|string',
+            'findings' => $usesXrayWorkflow || ($isRadiologistXray && $reportAction === 'draft') ? 'nullable|string' : 'required|string',
             'impression' => 'nullable|string',
+            'report_action' => $isRadiologistXray ? 'required|in:draft,release' : 'prohibited',
             'save_template' => 'nullable|boolean',
             'template_name' => 'required_if:save_template,1|nullable|string|max:255',
             'radiologist_id' => $usesXrayWorkflow ? 'required|integer|exists:users,id' : 'prohibited',
@@ -323,7 +348,11 @@ class StaffResultController extends Controller
             ] : 'prohibited',
         ]);
 
-        $existingResult = BillResult::where('bill_item_id', $billItem->id)->first();
+        $existingResultQuery = BillResult::where('bill_item_id', $billItem->id);
+        if ($isRadiologistXray) {
+            $existingResultQuery->where('radiologist_id', auth()->id());
+        }
+        $existingResult = $existingResultQuery->latest('id')->first();
 
         if ($usesXrayWorkflow) {
             if ($existingResult?->reported_at) {
@@ -379,6 +408,10 @@ class StaffResultController extends Controller
             abort(403, 'This investigation is not assigned to your account.');
         }
 
+        if ($isRadiologistXray && $existingResult?->reported_at) {
+            abort(403, 'This report has already been released and can no longer be edited.');
+        }
+
         if ($isXray && $existingResult?->radiologist_id && $staffType !== 'radiologist') {
             abort(403, 'Only the assigned radiologist can report on this investigation.');
         }
@@ -387,20 +420,33 @@ class StaffResultController extends Controller
             abort(403, 'This investigation already has a report entered by another staff member.');
         }
 
-        $result = BillResult::updateOrCreate(
-            ['bill_item_id' => $billItem->id],
-            [
-                'bill_id' => $bill->id,
-                'staff_id' => auth()->id(),
-                'reported_by' => auth()->id(),
-                'clinical_note' => $validated['clinical_note'] ?? null,
-                'findings' => $validated['findings'],
-                'impression' => $validated['impression'] ?? null,
-                'status' => 'completed',
-                'reported_at' => now(),
-                'completed_at' => now(),
-            ]
-        );
+        $isDraft = $isRadiologistXray && $validated['report_action'] === 'draft';
+        $reportData = [
+            'bill_id' => $bill->id,
+            'staff_id' => $isRadiologistXray ? ($existingResult?->staff_id ?? auth()->id()) : auth()->id(),
+            'reported_by' => $isDraft ? null : auth()->id(),
+            'clinical_note' => $validated['clinical_note'] ?? null,
+            'findings' => $validated['findings'] ?? '',
+            'impression' => $validated['impression'] ?? null,
+            'status' => $isDraft ? 'draft' : 'completed',
+            'reported_at' => $isDraft ? null : now(),
+            'completed_at' => $isDraft ? null : now(),
+        ];
+
+        if ($isDraft) {
+            // Drafts belong to the existing radiographer-created imaging row.
+            // Save that exact row to avoid creating or updating a different
+            // result when legacy data contains multiple rows for an item.
+            abort_unless($existingResult && (int) $existingResult->radiologist_id === (int) auth()->id(), 404);
+            $existingResult->fill($reportData);
+            $existingResult->saveOrFail();
+            $result = $existingResult->refresh();
+        } else {
+            $result = BillResult::updateOrCreate(
+                ['bill_item_id' => $billItem->id],
+                $reportData
+            );
+        }
 
         if ($request->boolean('save_template')) {
             ResultTemplate::updateOrCreate(
@@ -416,7 +462,12 @@ class StaffResultController extends Controller
             );
         }
 
-        return redirect()->route('staff.results.print', $result)->with('success', 'Result saved successfully.');
+        if ($isDraft) {
+            return redirect()->route('staff.results.entry', $bill)->withFragment('bill-item-'.$billItem->id)
+                ->with('success', 'Report draft saved. You can continue editing it before release.');
+        }
+
+        return redirect()->route('staff.results.print', $result)->with('success', 'Result saved and released successfully.');
     }
 
     public function viewImage(BillResultImage $image)
@@ -427,7 +478,9 @@ class StaffResultController extends Controller
         abort_unless($disk->exists($image->path), 404);
 
         $mimeType = strtolower($image->mime_type ?? '');
-        if ($mimeType === 'application/pdf') {
+        $isPdf = $mimeType === 'application/pdf'
+            || strtolower(pathinfo($image->original_name, PATHINFO_EXTENSION)) === 'pdf';
+        if ($isPdf) {
             return response()->file($disk->path($image->path), [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="'.addcslashes(basename($image->original_name), '"\\').'"',
@@ -463,8 +516,12 @@ class StaffResultController extends Controller
 
         $results = $this->activityQuery()
             ->with('bill', 'billItem.service', 'performer', 'reporter', 'staff')
-            ->when($from, fn ($query) => $query->whereDate($dateColumn, '>=', $from))
-            ->when($to, fn ($query) => $query->whereDate($dateColumn, '<=', $to))
+            ->when($from, fn ($query) => (auth()->user()->staff_type ?? 'staff') === 'radiologist'
+                ? $query->whereRaw('DATE(COALESCE(bill_results.reported_at, bill_results.updated_at)) >= ?', [$from])
+                : $query->whereDate($dateColumn, '>=', $from))
+            ->when($to, fn ($query) => (auth()->user()->staff_type ?? 'staff') === 'radiologist'
+                ? $query->whereRaw('DATE(COALESCE(bill_results.reported_at, bill_results.updated_at)) <= ?', [$to])
+                : $query->whereDate($dateColumn, '<=', $to))
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                 $query->whereHas('bill', fn ($bill) => $bill->where('bill_no', 'like', "%{$search}%")
                     ->orWhere('patient_name', 'like', "%{$search}%"))
@@ -552,17 +609,7 @@ class StaffResultController extends Controller
     public function print(BillResult $result)
     {
         $result->loadMissing(['bill', 'billItem.service']);
-
-        $isReporter = $result->reported_by === auth()->id();
-        $isPerformingRadiographer = (auth()->user()->staff_type ?? null) === 'radiographer'
-            && $result->performed_by === auth()->id();
-        $isRequestOwner = auth()->user()->role === 'user'
-            && (int) $result->bill?->user_id === (int) auth()->id()
-            && (bool) $result->billItem?->service?->is_xray;
-
-        if (! $result->reported_at || (! $isReporter && ! $isPerformingRadiographer && ! $isRequestOwner)) {
-            abort(403);
-        }
+        $this->authorizeReleasedReportAccess($result);
 
         $result->load([
             'bill.user',
@@ -591,6 +638,28 @@ class StaffResultController extends Controller
         }
 
         return view('staff.results.print', compact('result', 'reporterSignatureDataUri'));
+    }
+
+    public function recordPrint(BillResult $result)
+    {
+        $result->loadMissing(['bill', 'billItem.service']);
+        $this->authorizeReleasedReportAccess($result);
+
+        $result->increment('print_count');
+
+        return response()->json(['print_count' => $result->fresh()->print_count]);
+    }
+
+    private function authorizeReleasedReportAccess(BillResult $result): void
+    {
+        $isReporter = $result->reported_by === auth()->id();
+        $isPerformingRadiographer = (auth()->user()->staff_type ?? null) === 'radiographer'
+            && $result->performed_by === auth()->id();
+        $isRequestOwner = auth()->user()->role === 'user'
+            && (int) $result->bill?->user_id === (int) auth()->id()
+            && (bool) $result->billItem?->service?->is_xray;
+
+        abort_unless($result->reported_at && ($isReporter || $isPerformingRadiographer || $isRequestOwner), 403);
     }
 
     private function authorizeImageAccess(BillResultImage $image, bool $allowRequestOwner = false): void

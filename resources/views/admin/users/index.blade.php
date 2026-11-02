@@ -44,10 +44,19 @@
                 <td>{{ $user->designation }}</td>
                 <td>{{ $user->role === 'staff' ? strtoupper($user->staff_type ?? 'staff') : '-' }}</td>
                 <td class="text-right">
-                    <a href="{{ route('admin.users.edit', $user) }}"
-                       class="text-blue-600 hover:underline">
-                        Edit
-                    </a>
+                    <div class="flex flex-wrap justify-end gap-3">
+                        <a href="{{ route('admin.users.edit', $user) }}" class="text-blue-600 hover:underline">
+                            Edit
+                        </a>
+                        @if(auth()->id() !== $user->id && ! session()->has('impersonator_admin_id'))
+                            <form method="POST" action="{{ route('admin.users.impersonate', $user) }}">
+                                @csrf
+                                <button type="submit" class="font-medium text-amber-700 hover:underline" onclick="return confirm('Sign in as this user?')">
+                                    Impersonate
+                                </button>
+                            </form>
+                        @endif
+                    </div>
                 </td>
             </tr>
         @endforeach

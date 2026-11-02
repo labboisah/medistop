@@ -44,7 +44,8 @@
     </div>
 </div>
 
-<div class="grid lg:grid-cols-3 gap-6">
+<div class="grid {{ $staffType === 'radiographer' ? 'grid-cols-1' : 'lg:grid-cols-3' }} gap-6">
+    @if($staffType !== 'radiographer')
     <div class="bg-white p-6 rounded-xl shadow lg:col-span-1">
         @if($staffType === 'radiologist')
             <h3 class="font-bold text-primary mb-2">Assigned Imaging</h3>
@@ -76,8 +77,9 @@
             </form>
         </div>
     </div>
+    @endif
 
-    <div class="bg-white p-6 rounded-xl shadow lg:col-span-2 overflow-x-auto">
+    <div class="bg-white p-6 rounded-xl shadow {{ $staffType === 'radiographer' ? '' : 'lg:col-span-2' }} overflow-x-auto">
         <h3 class="font-bold text-primary mb-4">Recent Results</h3>
         <table class="w-full text-sm">
             <thead class="border-b bg-lightbg">

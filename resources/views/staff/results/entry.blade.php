@@ -27,6 +27,9 @@
             $result = $item->result;
             $isRadiographer = $staffType === 'radiographer';
             $usesXrayWorkflow = $isRadiographer && (bool) $item->service->is_xray;
+            $isRadiologistXray = $staffType === 'radiologist' && (bool) $item->service->is_xray;
+            $reportingDeadline = $result?->performed_at?->copy()->addHours(24)
+                ?? $result?->created_at?->copy()->addHours(24);
             $lockedByOtherReporter = $result && $result->reported_by && $result->reported_by !== auth()->id();
         @endphp
 
@@ -54,6 +57,12 @@
                             Assigned to {{ optional($result->assignedRadiologist)->name ?? 'Radiologist' }}
                         </span>
                     @endif
+
+                    @if($isRadiologistXray && ! $result?->reported_at && $reportingDeadline)
+                        <span data-report-countdown="{{ $reportingDeadline->timestamp * 1000 }}" class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
+                            Time remaining: calculating…
+                        </span>
+                    @endif
                 </div>
             </div>
 
@@ -62,21 +71,22 @@
                     <h4 class="font-semibold text-primary mb-3">Uploaded imaging</h4>
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         @foreach($result->images as $image)
+                                @php($isPdf = strtolower($image->mime_type ?? '') === 'application/pdf' || strtolower(pathinfo($image->original_name, PATHINFO_EXTENSION)) === 'pdf')
                             <div class="bg-white rounded-lg border p-3">
                                 @if(str_starts_with(strtolower($image->mime_type ?? ''), 'image/'))
                                     <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener">
                                         <img src="{{ route('staff.results.images.view', $image) }}" alt="{{ $image->original_name }}" class="w-full h-48 object-contain rounded">
                                     </a>
-                                @elseif(strtolower($image->mime_type ?? '') === 'application/pdf')
-                                    <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener" class="h-48 flex flex-col items-center justify-center gap-2 rounded bg-red-50 text-red-700 hover:bg-red-100">
-                                        <span class="text-3xl font-bold">PDF</span>
-                                        <span class="text-sm">Open document</span>
-                                    </a>
+                                    @elseif($isPdf)
+                                        <iframe src="{{ route('staff.results.images.view', $image) }}#page=1&view=Fit&toolbar=0&navpanes=0" title="PDF content preview: {{ $image->original_name }}" class="h-48 w-full rounded"></iframe>
                                 @else
                                     <div class="h-48 flex items-center justify-center text-sm text-gray-600">{{ $image->original_name }}</div>
                                 @endif
                                 <div class="mt-2 flex items-center justify-between gap-2 text-sm">
                                     <span class="truncate" title="{{ $image->original_name }}">{{ $image->original_name }}</span>
+                                        @if($isPdf)
+                                            <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener" class="shrink-0 text-primary hover:underline">Open</a>
+                                        @endif
                                     <a href="{{ route('staff.results.images.download', $image) }}" class="shrink-0 text-primary hover:underline">Download</a>
                                 </div>
                             </div>
@@ -139,6 +149,12 @@
                         </button>
                     </form>
                 @endif
+            @elseif($isRadiologistXray && $result?->reported_at)
+                <div class="mb-4 rounded-xl bg-green-50 p-4 text-sm text-green-800">
+                    <p class="font-semibold">Report released {{ $result->reported_at->format('d M Y h:i A') }}.</p>
+                    <p class="mt-1">Print count: {{ $result->print_count ?? 0 }}</p>
+                </div>
+                <a href="{{ route('staff.results.print', $result) }}" class="inline-block rounded-xl bg-primary px-6 py-3 text-white">View and print released report</a>
             @elseif($lockedByOtherReporter)
                 <div class="bg-lightbg p-4 rounded-xl text-sm text-gray-600">
                     This result has already been reported by {{ optional($result->reporter)->name ?? 'another staff member' }}.
@@ -147,6 +163,12 @@
                 <form method="POST" action="{{ route('staff.results.store', $bill) }}" class="space-y-5">
                     @csrf
                     <input type="hidden" name="bill_item_id" value="{{ $item->id }}">
+
+                    @if($isRadiologistXray && $result?->status === 'draft')
+                        <div class="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
+                            Draft saved {{ $result->updated_at?->format('d M Y h:i A') }}. Continue editing, save another draft, or release the report when ready.
+                        </div>
+                    @endif
 
                     <div>
                         <label class="block text-sm font-medium mb-2">Result Template</label>
@@ -167,7 +189,7 @@
 
                     <div>
                         <label class="block text-sm font-medium mb-2">Findings</label>
-                        <textarea id="findings_{{ $item->id }}" name="findings" rows="7" class="w-full px-4 py-3 border rounded-xl" required>{{ old('findings', $result?->findings) }}</textarea>
+                        <textarea id="findings_{{ $item->id }}" name="findings" rows="7" class="w-full px-4 py-3 border rounded-xl" @unless($isRadiologistXray) required @endunless>{{ old('findings', $result?->findings) }}</textarea>
                         @error('findings')<p class="text-red-600 text-sm mt-2">{{ $message }}</p>@enderror
                     </div>
 
@@ -190,8 +212,13 @@
                     </div>
 
                     <div class="flex flex-wrap gap-3">
-                        <button class="bg-accent text-white px-6 py-3 rounded-xl">Save and Print</button>
-                        @if($result)
+                        @if($isRadiologistXray)
+                            <button type="submit" name="report_action" value="draft" class="rounded-xl bg-gray-600 px-6 py-3 text-white hover:bg-gray-700">Save as Draft</button>
+                            <button type="submit" name="report_action" value="release" class="rounded-xl bg-accent px-6 py-3 text-white hover:bg-green-600">Release Report</button>
+                        @else
+                            <button class="bg-accent text-white px-6 py-3 rounded-xl">Save and Print</button>
+                        @endif
+                        @if($result && ! $isRadiologistXray)
                             <a href="{{ route('staff.results.print', $result) }}"
                                class="bg-primary text-white px-6 py-3 rounded-xl">Print Existing</a>
                         @endif
@@ -208,6 +235,26 @@
 const resultTemplates = @js($templatePayload);
 
 document.addEventListener('DOMContentLoaded', () => {
+    const updateReportCountdowns = () => {
+        document.querySelectorAll('[data-report-countdown]').forEach((clock) => {
+            let seconds = Math.floor((Number(clock.dataset.reportCountdown) - Date.now()) / 1000);
+            const overdue = seconds < 0;
+            seconds = Math.abs(seconds);
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const remainingSeconds = seconds % 60;
+            const time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+            clock.textContent = overdue ? `Overdue by ${time}` : `Time remaining: ${time}`;
+            clock.classList.toggle('bg-red-100', overdue);
+            clock.classList.toggle('text-red-800', overdue);
+            clock.classList.toggle('bg-amber-100', !overdue);
+            clock.classList.toggle('text-amber-900', !overdue);
+        });
+    };
+
+    updateReportCountdowns();
+    window.setInterval(updateReportCountdowns, 1000);
+
     document.querySelectorAll('[data-imaging-preview]').forEach((input) => {
         const preview = document.getElementById(input.dataset.imagingPreview);
         let previewUrls = [];

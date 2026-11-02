@@ -17,6 +17,7 @@ use App\Http\Controllers\DatabaseBackupController;
 use App\Http\Controllers\LocalServerController;
 use App\Http\Controllers\PublicInvestigationBookingController;
 use App\Http\Controllers\AdminPerformanceController;
+use App\Http\Controllers\ImpersonationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -58,6 +59,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/impersonation/stop', [ImpersonationController::class, 'stop'])->name('impersonation.stop');
 });
 
 require __DIR__.'/auth.php';
@@ -88,6 +90,7 @@ Route::middleware(['auth', 'admin'])
 
     Route::resource('categories', CategoryController::class);
     Route::resource('services', ServiceController::class);
+    Route::post('users/{user}/impersonate', [ImpersonationController::class, 'start'])->name('users.impersonate');
     Route::resource('users', UserController::class);
     Route::resource('finances', FinanceController::class);
     Route::get('expenses/report', [ExpenseController::class, 'adminReport'])->name('expenses.report');
@@ -200,3 +203,7 @@ Route::middleware(['auth', 'staff'])
 Route::middleware('auth')
     ->get('/staff/results/{result}/print', [StaffResultController::class, 'print'])
     ->name('staff.results.print');
+
+Route::middleware('auth')
+    ->post('/staff/results/{result}/printed', [StaffResultController::class, 'recordPrint'])
+    ->name('staff.results.printed');

@@ -29,6 +29,7 @@
                     <th class="py-3 px-4 text-left">Patient / Bill</th>
                     <th class="py-3 px-4 text-left">Investigation</th>
                     <th class="py-3 px-4 text-left">Workflow status</th>
+                    <th class="py-3 px-4 text-left">Uploaded imaging</th>
                     <th class="py-3 px-4 text-left">Radiologist</th>
                     <th class="py-3 px-4 text-left">Updated</th>
                     <th class="py-3 px-4 text-right">Next action</th>
@@ -57,6 +58,32 @@
                                 <div class="mt-1 text-xs text-gray-500">{{ $result->images->count() }} file(s) uploaded{{ $result->performed_at ? ' · ' . $result->performed_at->format('d M Y h:i A') : '' }}</div>
                             @endif
                         </td>
+                        <td class="py-3 px-4">
+                            @if($result?->images->isNotEmpty())
+                                <div class="grid min-w-[13rem] grid-cols-2 gap-2">
+                                    @foreach($result->images as $image)
+                                        <div class="min-w-0 rounded-lg border bg-white p-2">
+                                            @if(str_starts_with(strtolower($image->mime_type ?? ''), 'image/'))
+                                                <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener">
+                                                    <img src="{{ route('staff.results.images.view', $image) }}" alt="{{ $image->original_name }}" loading="lazy" class="h-24 w-full rounded object-contain">
+                                                </a>
+                                            @elseif(strtolower($image->mime_type ?? '') === 'application/pdf' || strtolower(pathinfo($image->original_name, PATHINFO_EXTENSION)) === 'pdf')
+                                                <iframe src="{{ route('staff.results.images.view', $image) }}#page=1&view=Fit&toolbar=0&navpanes=0" title="PDF content preview: {{ $image->original_name }}" class="h-48 w-full rounded"></iframe>
+                                            @else
+                                                <div class="flex h-24 items-center justify-center rounded bg-gray-50 text-xs text-gray-500">Preview unavailable</div>
+                                            @endif
+                                            <div class="mt-1 truncate text-xs" title="{{ $image->original_name }}">{{ $image->original_name }}</div>
+                                            @if(strtolower($image->mime_type ?? '') === 'application/pdf' || strtolower(pathinfo($image->original_name, PATHINFO_EXTENSION)) === 'pdf')
+                                                <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener" class="mr-2 text-xs text-primary hover:underline">Open PDF</a>
+                                            @endif
+                                            <a href="{{ route('staff.results.images.download', $image) }}" class="text-xs text-primary hover:underline">Download</a>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <span class="text-xs text-gray-500">Awaiting upload</span>
+                            @endif
+                        </td>
                         <td class="py-3 px-4">{{ $result?->assignedRadiologist?->name ?? '—' }}</td>
                         <td class="py-3 px-4">{{ optional($result?->updated_at ?? $item->bill->created_at)->format('d M Y h:i A') }}</td>
                         <td class="py-3 px-4 text-right">
@@ -71,7 +98,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="py-8 text-center text-gray-500">No paid investigations match these filters.</td>
+                        <td colspan="7" class="py-8 text-center text-gray-500">No paid investigations match these filters.</td>
                     </tr>
                 @endforelse
             </tbody>

@@ -20,12 +20,14 @@ class BillResult extends Model
         'impression',
         'status',
         'completed_at',
+        'print_count',
     ];
 
     protected $casts = [
         'completed_at' => 'datetime',
         'performed_at' => 'datetime',
         'reported_at' => 'datetime',
+        'print_count' => 'integer',
     ];
 
     public function bill()

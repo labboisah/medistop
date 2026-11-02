@@ -44,7 +44,9 @@
                 <th class="py-3 px-4 text-left">Investigation</th>
                 <th class="py-3 px-4 text-left">Performed By</th>
                 <th class="py-3 px-4 text-left">Reported By</th>
+                <th class="py-3 px-4 text-left">Status / Draft</th>
                 <th class="py-3 px-4 text-left">Activity Date</th>
+                <th class="py-3 px-4 text-center">Print count</th>
                 <th class="py-3 px-4 text-right">Action</th>
             </tr>
         </thead>
@@ -56,14 +58,33 @@
                     <td class="py-3 px-4">{{ $result->billItem->service->name }}</td>
                     <td class="py-3 px-4">{{ optional($result->performer)->name ?? '-' }}</td>
                     <td class="py-3 px-4">{{ optional($result->reporter)->name ?? optional($result->staff)->name ?? '-' }}</td>
-                    <td class="py-3 px-4">{{ optional($staffType === 'radiographer' ? $result->performed_at : ($result->reported_at ?? $result->completed_at))->format('d M Y h:i A') }}</td>
+                    <td class="py-3 px-4">
+                        @if($result->status === 'draft' && ! $result->reported_at)
+                            <details class="max-w-md">
+                                <summary class="cursor-pointer font-semibold text-blue-700">Draft saved · Review text</summary>
+                                <div class="mt-2 space-y-2 rounded-lg bg-blue-50 p-3 text-gray-700">
+                                    @if($result->clinical_note)<p><strong>Clinical note:</strong> {{ $result->clinical_note }}</p>@endif
+                                    <p><strong>Findings:</strong> {{ $result->findings ?: '—' }}</p>
+                                    @if($result->impression)<p><strong>Impression:</strong> {{ $result->impression }}</p>@endif
+                                </div>
+                            </details>
+                        @elseif($result->reported_at)
+                            <span class="font-medium text-green-700">Released</span>
+                        @else
+                            <span class="text-gray-500">Awaiting radiologist</span>
+                        @endif
+                    </td>
+                    <td class="py-3 px-4">{{ optional($staffType === 'radiographer' ? $result->performed_at : ($result->reported_at ?? $result->completed_at ?? $result->updated_at ?? $result->performed_at))->format('d M Y h:i A') }}</td>
+                    <td class="py-3 px-4 text-center">{{ $result->print_count ?? 0 }}</td>
                     <td class="py-3 px-4 text-right">
-                        @if($result->reported_at)
+                        @if($result->status === 'draft' && ! $result->reported_at && $staffType === 'radiologist' && $result->billItem->service->is_xray)
+                            <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}" class="font-semibold text-blue-700 hover:underline">Continue draft</a>
+                        @elseif($result->reported_at)
                             <a href="{{ route('staff.results.print', $result) }}" class="text-primary hover:underline">Print</a>
                             @if($staffType === 'radiologist'
                                 && $result->billItem->service->is_xray
                                 && (int) $result->radiologist_id === (int) auth()->id())
-                                <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}" class="ml-3 font-semibold text-accent hover:underline">Edit report</a>
+                                <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}" class="ml-3 font-semibold text-accent hover:underline">Report details</a>
                             @endif
                         @else
                             <span class="text-gray-500">Awaiting radiologist</span>
@@ -72,7 +93,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="py-6 text-center text-gray-500">No result has been entered yet.</td>
+                    <td colspan="9" class="py-6 text-center text-gray-500">No result has been entered yet.</td>
                 </tr>
             @endforelse
         </tbody>

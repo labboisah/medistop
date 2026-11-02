@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <title>Result - {{ $result->bill->bill_no }}</title>
     <style>
@@ -208,9 +209,13 @@
         @if((auth()->user()->staff_type ?? null) === 'radiologist'
             && $result->billItem->service->is_xray
             && (int) $result->radiologist_id === (int) auth()->id())
-            <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}">Edit Report</a>
+            <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}">Report Details</a>
         @endif
-        <button onclick="window.print()">Print Result</button>
+        @if((auth()->user()->staff_type ?? null) === 'radiologist'
+            && (int) $result->radiologist_id === (int) auth()->id())
+            <span id="print-count" class="mr-3 text-sm font-semibold text-gray-700">Print count: {{ $result->print_count ?? 0 }}</span>
+        @endif
+        <button id="print-result-button" type="button" data-count-url="{{ route('staff.results.printed', $result) }}">Print Result</button>
     </div>
 
     <main class="sheet">
@@ -294,5 +299,34 @@
             </div>
         </div>
     </main>
+    <script>
+        const printResultButton = document.getElementById('print-result-button');
+        printResultButton?.addEventListener('click', async (event) => {
+            const button = event.currentTarget;
+            button.disabled = true;
+
+            try {
+                const response = await fetch(button.dataset.countUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                });
+                if (!response.ok) throw new Error('Print count could not be recorded.');
+
+                const data = await response.json();
+                const count = document.getElementById('print-count');
+                if (count) count.textContent = `Print count: ${data.print_count}`;
+                window.print();
+            } catch (error) {
+                button.disabled = false;
+                alert('The print count could not be recorded. Please try again before printing.');
+            }
+        });
+        window.addEventListener('afterprint', () => {
+            if (printResultButton) printResultButton.disabled = false;
+        });
+    </script>
 </body>
 </html>

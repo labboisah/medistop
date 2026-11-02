@@ -486,6 +486,18 @@
 
         <!-- PAGE CONTENT -->
         <main class="flex-1 p-6">
+            @if(session()->has('impersonator_admin_id'))
+                <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900" role="status">
+                    <p>You are impersonating <strong>{{ auth()->user()->name }}</strong>.</p>
+                    <form method="POST" action="{{ route('impersonation.stop') }}">
+                        @csrf
+                        <button type="submit" class="rounded-lg bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800">
+                            Return to admin account
+                        </button>
+                    </form>
+                </div>
+            @endif
+
             @if(session('success') || session('warning'))
             <div id="toast"
                 class="fixed top-5 right-5 {{ session('warning') ? 'bg-yellow-500' : 'bg-accent' }} text-white px-6 py-3 rounded-xl shadow-lg max-w-md">
