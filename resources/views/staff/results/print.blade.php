@@ -119,8 +119,8 @@
         }
         .content {
             white-space: pre-line;
-            line-height: 1.45;
-            font-size: 13px;
+            line-height: 1.9 !important;
+            font-size: 18px !important;
         }
         .image-grid {
             display: grid;
@@ -195,6 +195,7 @@
             .address { font-size: 10px; }
             .report-title { margin-top: 8px; font-size: 13px; padding: 5px 14px; }
             .section { margin-top: 8px; }
+            .section .content { font-size: 18px !important; line-height: 1.9 !important; }
             .signature { margin-top: 16px; }
         }
     </style>
