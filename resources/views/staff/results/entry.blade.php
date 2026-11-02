@@ -82,13 +82,20 @@
                                 @else
                                     <div class="h-48 flex items-center justify-center text-sm text-gray-600">{{ $image->original_name }}</div>
                                 @endif
-                                <div class="mt-2 flex items-center justify-between gap-2 text-sm">
+                                <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
                                     <span class="truncate" title="{{ $image->original_name }}">{{ $image->original_name }}</span>
                                         @if($isPdf)
                                             <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener" class="shrink-0 text-primary hover:underline">Open</a>
                                         @endif
                                     <a href="{{ route('staff.results.images.download', $image) }}" class="shrink-0 text-primary hover:underline">Download</a>
                                 </div>
+                                @if($usesXrayWorkflow && ! $result?->reported_at && (int) $result?->performed_by === (int) auth()->id())
+                                    <form method="POST" action="{{ route('staff.results.images.delete', $image) }}" onsubmit="return confirm('Remove this uploaded image?')" class="mt-3">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="rounded-lg border border-red-300 bg-red-50 px-3 py-2 font-semibold text-red-700 hover:bg-red-100">Remove image</button>
+                                    </form>
+                                @endif
                             </div>
                         @endforeach
                     </div>

@@ -4,6 +4,10 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
+    @if(session('success'))
+        <div class="rounded-xl bg-green-50 p-4 text-green-800">{{ session('success') }}</div>
+    @endif
+
     <div class="bg-white p-6 rounded-2xl shadow">
         <h2 class="text-2xl font-bold text-primary">Radiographer Worklist</h2>
         <p class="text-sm text-gray-600 mt-1">Only services marked as X-Ray appear here. Upload images for the assigned radiologist, then print the completed report.</p>
@@ -39,10 +43,11 @@
                 @forelse($studies as $item)
                     @php
                         $result = $item->result;
-                        $statusLabel = ! $result
+                        $hasImages = $result && $result->images->isNotEmpty();
+                        $statusLabel = ! $hasImages
                             ? 'Awaiting imaging upload'
                             : ($result->reported_at ? 'Report ready to print' : 'X-ray uploaded · Awaiting radiologist report');
-                        $statusClass = ! $result
+                        $statusClass = ! $hasImages
                             ? 'bg-amber-100 text-amber-800'
                             : ($result->reported_at ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800');
                     @endphp
@@ -77,6 +82,15 @@
                                                 <a href="{{ route('staff.results.images.view', $image) }}" target="_blank" rel="noopener" class="mr-2 text-xs text-primary hover:underline">Open PDF</a>
                                             @endif
                                             <a href="{{ route('staff.results.images.download', $image) }}" class="text-xs text-primary hover:underline">Download</a>
+                                            @if(! $result->reported_at)
+                                                <form method="POST" action="{{ route('staff.results.images.delete', $image) }}" onsubmit="return confirm('Remove this uploaded image?')" class="mt-2">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-100">Remove image</button>
+                                                </form>
+                                            @else
+                                                <span class="mt-2 inline-block text-xs text-gray-500">Report released · removal locked</span>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>

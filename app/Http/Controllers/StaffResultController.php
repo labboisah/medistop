@@ -93,9 +93,14 @@ class StaffResultController extends Controller
                     $query->whereDoesntHave('result')
                         ->orWhereHas('result', fn ($result) => $result->where('performed_by', $radiographerId));
                 })
-                ->when($status === 'awaiting_upload', fn ($query) => $query->whereDoesntHave('result'))
+                ->when($status === 'awaiting_upload', fn ($query) => $query->where(function ($query) use ($radiographerId) {
+                    $query->whereDoesntHave('result')
+                        ->orWhereHas('result', fn ($result) => $result
+                            ->where('performed_by', $radiographerId)
+                            ->whereDoesntHave('images'));
+                }))
                 ->when($status === 'awaiting_report', fn ($query) => $query->whereHas('result', fn ($result) => $result
-                    ->where('performed_by', $radiographerId)->whereNull('reported_at')))
+                    ->where('performed_by', $radiographerId)->whereNull('reported_at')->whereHas('images')))
                 ->when($status === 'report_ready', fn ($query) => $query->whereHas('result', fn ($result) => $result
                     ->where('performed_by', $radiographerId)->whereNotNull('reported_at')))
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
@@ -506,6 +511,20 @@ class StaffResultController extends Controller
         abort_unless($disk->exists($image->path), 404);
 
         return $disk->download($image->path, $image->original_name);
+    }
+
+    public function deleteImage(BillResultImage $image)
+    {
+        $result = $image->result()->with('billItem.service')->firstOrFail();
+        abort_unless((auth()->user()->staff_type ?? null) === 'radiographer', 403);
+        abort_unless($result->billItem?->service?->is_xray, 404);
+        abort_unless((int) $result->performed_by === (int) auth()->id(), 403);
+        abort_if($result->reported_at, 403, 'Images cannot be removed after the report has been released.');
+
+        Storage::disk('local')->delete($image->path);
+        $image->deleteOrFail();
+
+        return back()->with('success', 'Uploaded image removed.');
     }
 
     public function reports(Request $request)
