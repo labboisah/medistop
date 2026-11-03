@@ -7,6 +7,7 @@ use App\Models\BillItem;
 use App\Models\BillResult;
 use App\Models\BillResultImage;
 use App\Models\ResultTemplate;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -113,7 +114,12 @@ class StaffResultController extends Controller
                 ->paginate(15)
                 ->withQueryString();
 
-            return view('staff.results.radiographer-worklist', compact('studies', 'search', 'from', 'to', 'status'));
+            $radiologists = User::where('role', 'staff')
+                ->where('staff_type', 'radiologist')
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+            return view('staff.results.radiographer-worklist', compact('studies', 'search', 'from', 'to', 'status', 'radiologists'));
         }
 
         if ($staffType === 'radiologist') {
@@ -527,6 +533,34 @@ class StaffResultController extends Controller
         return back()->with('success', 'Uploaded image removed.');
     }
 
+    public function reassignRadiologist(Request $request, BillResult $result)
+    {
+        abort_unless((auth()->user()->staff_type ?? null) === 'radiographer', 403);
+        $result->loadMissing('billItem.service', 'images');
+        abort_unless($result->billItem?->service?->is_xray, 404);
+        abort_unless((int) $result->performed_by === (int) auth()->id(), 403);
+        abort_if($result->reported_at, 403, 'A released report cannot be reassigned.');
+        abort_if($result->images->isEmpty(), 403, 'Upload imaging before reassigning this study.');
+
+        $deadline = ($result->performed_at ?? $result->created_at)?->copy()->addHours(24);
+        abort_unless($deadline && now()->greaterThanOrEqualTo($deadline), 403, 'Radiologist reassignment is available after 24 hours.');
+
+        $validated = $request->validate([
+            'radiologist_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $radiologist = User::where('role', 'staff')
+            ->where('staff_type', 'radiologist')
+            ->findOrFail($validated['radiologist_id']);
+
+        abort_if((int) $radiologist->id === (int) $result->radiologist_id, 422, 'Choose a different radiologist.');
+
+        $result->radiologist_id = $radiologist->id;
+        $result->saveOrFail();
+
+        return back()->with('success', "Study reassigned to {$radiologist->name}.");
+    }
+
     public function reports(Request $request)
     {
         [$from, $to] = $this->dateRange($request);
@@ -722,9 +756,16 @@ class StaffResultController extends Controller
 
     private function commissionQuery()
     {
-        return $this->activityQuery()
+        $query = $this->activityQuery()
             ->join('bill_items', 'bill_results.bill_item_id', '=', 'bill_items.id')
             ->leftJoin('revenue_distributions', 'bill_items.id', '=', 'revenue_distributions.bill_item_id');
+
+        if ((auth()->user()->staff_type ?? 'staff') === 'radiologist') {
+            $query->whereNotNull('bill_results.reported_at')
+                ->where('bill_results.reported_by', auth()->id());
+        }
+
+        return $query;
     }
 
     private function activityQuery()

@@ -196,6 +196,7 @@ Route::middleware(['auth', 'staff'])
                 Route::get('/images/{image}', [StaffResultController::class, 'viewImage'])->name('images.view');
                 Route::get('/images/{image}/download', [StaffResultController::class, 'downloadImage'])->name('images.download');
                 Route::delete('/images/{image}', [StaffResultController::class, 'deleteImage'])->name('images.delete');
+                Route::patch('/{result}/reassign-radiologist', [StaffResultController::class, 'reassignRadiologist'])->name('reassign-radiologist');
                 Route::get('/reports', [StaffResultController::class, 'reports'])->name('reports');
                 Route::get('/commission', [StaffResultController::class, 'commission'])->name('commission');
             });

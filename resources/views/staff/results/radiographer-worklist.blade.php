@@ -44,6 +44,9 @@
                     @php
                         $result = $item->result;
                         $hasImages = $result && $result->images->isNotEmpty();
+                        $reassignmentDeadline = $result
+                            ? ($result->performed_at ?? $result->created_at)?->copy()->addHours(24)
+                            : null;
                         $statusLabel = ! $hasImages
                             ? 'Awaiting imaging upload'
                             : ($result->reported_at ? 'Report ready to print' : 'X-ray uploaded · Awaiting radiologist report');
@@ -107,6 +110,27 @@
                                 <a href="{{ route('staff.results.entry', $item->bill) }}" class="inline-flex rounded-lg bg-accent px-4 py-2 font-medium text-white hover:bg-green-600">
                                     {{ $result ? 'View imaging status' : 'Start imaging' }}
                                 </a>
+                                @if($result && $hasImages && $reassignmentDeadline)
+                                    @if(now()->greaterThanOrEqualTo($reassignmentDeadline))
+                                        <form method="POST" action="{{ route('staff.results.reassign-radiologist', $result) }}" class="mt-3 min-w-52 space-y-2 text-left">
+                                            @csrf
+                                            @method('PATCH')
+                                            <label class="block text-xs font-semibold text-gray-700">Reassign overdue study</label>
+                                            <select name="radiologist_id" required class="w-full rounded-lg border px-3 py-2 text-xs">
+                                                <option value="">Choose another radiologist</option>
+                                                @foreach($radiologists as $radiologist)
+                                                    @if((int) $radiologist->id !== (int) $result->radiologist_id)
+                                                        <option value="{{ $radiologist->id }}">{{ $radiologist->name }}</option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                            @error('radiologist_id')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+                                            <button type="submit" class="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700">Reassign radiologist</button>
+                                        </form>
+                                    @else
+                                        <p class="mt-2 text-xs text-gray-500">Reassignment available after {{ $reassignmentDeadline->format('d M Y h:i A') }}</p>
+                                    @endif
+                                @endif
                             @endif
                         </td>
                     </tr>
