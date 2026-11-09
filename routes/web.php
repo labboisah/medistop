@@ -17,6 +17,7 @@ use App\Http\Controllers\DatabaseBackupController;
 use App\Http\Controllers\LocalServerController;
 use App\Http\Controllers\PublicInvestigationBookingController;
 use App\Http\Controllers\AdminPerformanceController;
+use App\Http\Controllers\CommissionClaimController;
 use App\Http\Controllers\ImpersonationController;
 use Illuminate\Support\Facades\Route;
 
@@ -58,6 +59,7 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/bank-details', [ProfileController::class, 'updateBankDetails'])->name('profile.bank-details.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/impersonation/stop', [ImpersonationController::class, 'stop'])->name('impersonation.stop');
 });
@@ -123,6 +125,10 @@ Route::middleware(['auth', 'admin'])
 });
 
 Route::middleware(['auth', 'user'])->group(function () {
+
+    Route::get('commission-claims', [CommissionClaimController::class, 'index'])->name('commission-claims.index');
+    Route::post('commission-claims/{claim}/settle', [CommissionClaimController::class, 'settle'])->name('commission-claims.settle');
+    Route::post('commission-claims/{claim}/reject', [CommissionClaimController::class, 'reject'])->name('commission-claims.reject');
 
     Route::post('/pdf', [ReportController::class,'exportPdf'])->name('reports.pdf');
 
@@ -199,6 +205,7 @@ Route::middleware(['auth', 'staff'])
                 Route::patch('/{result}/reassign-radiologist', [StaffResultController::class, 'reassignRadiologist'])->name('reassign-radiologist');
                 Route::get('/reports', [StaffResultController::class, 'reports'])->name('reports');
                 Route::get('/commission', [StaffResultController::class, 'commission'])->name('commission');
+        Route::post('/commission-claims', [CommissionClaimController::class, 'store'])->name('commission-claims.store');
             });
     });
 

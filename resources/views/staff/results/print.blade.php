@@ -79,6 +79,9 @@
         .patient-details p {
             margin: 3px 0;
         }
+        .patient-details {
+            font-size: 15px;
+        }
         .patient-xray-images {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -119,8 +122,8 @@
         }
         .content {
             white-space: pre-line;
-            line-height: 1.9 !important;
-            font-size: 18px !important;
+            line-height: 1.6;
+            font-size: 14px;
         }
         .image-grid {
             display: grid;
@@ -195,7 +198,8 @@
             .address { font-size: 10px; }
             .report-title { margin-top: 8px; font-size: 13px; padding: 5px 14px; }
             .section { margin-top: 8px; }
-            .section .content { font-size: 18px !important; line-height: 1.9 !important; }
+            .patient-details { font-size: 15px; }
+            .section .content { font-size: 14px; line-height: 1.6; }
             .signature { margin-top: 16px; }
         }
     </style>
@@ -210,7 +214,11 @@
         @if((auth()->user()->staff_type ?? null) === 'radiologist'
             && $result->billItem->service->is_xray
             && (int) $result->radiologist_id === (int) auth()->id())
-            <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}">Report Details</a>
+            @if((int) ($result->print_count ?? 0) === 0)
+                <a href="{{ route('staff.results.entry', ['bill' => $result->bill, 'edit' => 1]) }}#bill-item-{{ $result->bill_item_id }}">Edit Report</a>
+            @else
+                <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}">Report Details</a>
+            @endif
         @endif
         @if((auth()->user()->staff_type ?? null) === 'radiologist'
             && (int) $result->radiologist_id === (int) auth()->id())

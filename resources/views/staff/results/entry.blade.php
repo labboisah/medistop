@@ -156,12 +156,15 @@
                         </button>
                     </form>
                 @endif
-            @elseif($isRadiologistXray && $result?->reported_at)
+            @elseif($isRadiologistXray && $result?->reported_at && (! request()->boolean('edit') || (int) ($result->print_count ?? 0) > 0))
                 <div class="mb-4 rounded-xl bg-green-50 p-4 text-sm text-green-800">
                     <p class="font-semibold">Report released {{ $result->reported_at->format('d M Y h:i A') }}.</p>
                     <p class="mt-1">Print count: {{ $result->print_count ?? 0 }}</p>
                 </div>
                 <a href="{{ route('staff.results.print', $result) }}" class="inline-block rounded-xl bg-primary px-6 py-3 text-white">View and print released report</a>
+                @if((int) ($result->print_count ?? 0) === 0)
+                    <a href="{{ route('staff.results.entry', ['bill' => $bill, 'edit' => 1]) }}" class="ml-2 inline-block rounded-xl bg-amber-600 px-6 py-3 text-white">Edit Report</a>
+                @endif
             @elseif($lockedByOtherReporter)
                 <div class="bg-lightbg p-4 rounded-xl text-sm text-gray-600">
                     This result has already been reported by {{ optional($result->reporter)->name ?? 'another staff member' }}.
@@ -170,6 +173,13 @@
                 <form method="POST" action="{{ route('staff.results.store', $bill) }}" class="space-y-5">
                     @csrf
                     <input type="hidden" name="bill_item_id" value="{{ $item->id }}">
+
+                    @if($isRadiologistXray && $result?->reported_at && request()->boolean('edit') && (int) ($result->print_count ?? 0) === 0)
+                        <div class="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+                            Editing a released report. Changes will be saved to the released report.
+                            <a href="{{ route('staff.results.entry', $bill) }}" class="ml-2 font-semibold underline">Cancel editing</a>
+                        </div>
+                    @endif
 
                     @if($isRadiologistXray && $result?->status === 'draft')
                         <div class="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
@@ -219,9 +229,11 @@
                     </div>
 
                     <div class="flex flex-wrap gap-3">
-                        @if($isRadiologistXray)
+                        @if($isRadiologistXray && ! ($result?->reported_at && request()->boolean('edit')))
                             <button type="submit" name="report_action" value="draft" class="rounded-xl bg-gray-600 px-6 py-3 text-white hover:bg-gray-700">Save as Draft</button>
-                            <button type="submit" name="report_action" value="release" class="rounded-xl bg-accent px-6 py-3 text-white hover:bg-green-600">Release Report</button>
+                        @endif
+                        @if($isRadiologistXray)
+                            <button type="submit" name="report_action" value="release" class="rounded-xl bg-accent px-6 py-3 text-white hover:bg-green-600">{{ $result?->reported_at ? 'Save Report Changes' : 'Release Report' }}</button>
                         @else
                             <button class="bg-accent text-white px-6 py-3 rounded-xl">Save and Print</button>
                         @endif

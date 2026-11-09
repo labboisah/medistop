@@ -25,6 +25,9 @@ class User extends Authenticatable
         'role',
         'staff_type',
         'designation',
+        'bank_name',
+        'bank_account_name',
+        'bank_account_number',
     ];
 
     /**
@@ -203,6 +206,11 @@ class User extends Authenticatable
             'monthProfit' => $monthProfit,
         ];
 
+    }
+
+    public function commissionClaims()
+    {
+        return $this->hasMany(CommissionClaim::class, 'staff_id');
     }
 
     /**

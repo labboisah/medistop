@@ -419,8 +419,12 @@ class StaffResultController extends Controller
             abort(403, 'This investigation is not assigned to your account.');
         }
 
-        if ($isRadiologistXray && $existingResult?->reported_at) {
-            abort(403, 'This report has already been released and can no longer be edited.');
+        if ($isRadiologistXray && $existingResult?->reported_at && (int) ($existingResult->print_count ?? 0) > 0) {
+            abort(403, 'This report has already been printed and can no longer be edited.');
+        }
+
+        if ($isRadiologistXray && $existingResult?->reported_at && $validated['report_action'] !== 'release') {
+            abort(403, 'An already released report must remain released when it is edited.');
         }
 
         if ($isXray && $existingResult?->radiologist_id && $staffType !== 'radiologist') {
@@ -646,12 +650,24 @@ class StaffResultController extends Controller
             }))
             ->sum('bill_items.price');
 
+        $claimableCommission = (float) $this->commissionQuery()->sum($commissionColumn);
+        $reservedClaims = auth()->user()->commissionClaims()
+            ->whereIn('status', ['pending', 'settled'])
+            ->get(['status', 'requested_amount', 'settled_amount'])
+            ->sum(fn ($claim) => $claim->status === 'pending'
+                ? (float) $claim->requested_amount
+                : (float) $claim->settled_amount);
+        $claimableCommission = max(0, $claimableCommission - $reservedClaims);
+        $commissionClaims = auth()->user()->commissionClaims()->latest()->limit(5)->get();
+
         return view('staff.results.commission', compact(
             'results',
             'todayCommission',
             'monthCommission',
             'filteredCommission',
             'filteredBillAmount',
+            'claimableCommission',
+            'commissionClaims',
             'from',
             'to',
             'staffType',

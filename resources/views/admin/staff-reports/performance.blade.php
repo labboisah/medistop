@@ -93,6 +93,11 @@
     </div>
 
     <div class="bg-white p-4 rounded-xl shadow">
+        <p class="text-sm text-gray-500">Staff Commission Settled</p>
+        <p class="text-base xl:text-lg font-bold text-orange-600 mt-2">NGN {{ number_format($totalStaffClaims, 2) }}</p>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl shadow">
         <p class="text-sm text-gray-500">Total Expenditure</p>
         <p class="text-base xl:text-lg font-bold text-red-700 mt-2">NGN {{ number_format($totalExpenditure, 2) }}</p>
     </div>
@@ -131,6 +136,7 @@
                 <th class="py-3 px-4 text-right">Salary</th>
                 <th class="py-3 px-4 text-right">After Expenditure</th>
                 <th class="py-3 px-4 text-right">Expenses</th>
+                <th class="py-3 px-4 text-right">Staff Claims</th>
                 <th class="py-3 px-4 text-right">Total Expenditure</th>
                 <th class="py-3 px-4 text-right">Profit</th>
             </tr>
@@ -149,6 +155,7 @@
                     <td class="py-3 px-4 text-right text-yellow-600">NGN {{ number_format($row['salary_amount'] ?? 0, 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold">NGN {{ number_format($row['net_after_salary'] ?? $row['net'], 2) }}</td>
                     <td class="py-3 px-4 text-right text-red-600">NGN {{ number_format($row['expenses'], 2) }}</td>
+                    <td class="py-3 px-4 text-right text-orange-600">NGN {{ number_format($row['staff_claims'] ?? 0, 2) }}</td>
                     <td class="py-3 px-4 text-right text-red-700">NGN {{ number_format($row['total_expenditure'] ?? $row['expenses'], 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-green-600">NGN {{ number_format($row['profit'], 2) }}</td>
                 </tr>
@@ -177,6 +184,7 @@
                 <th class="py-3 px-4 text-right">Radiologist Share</th>
                 <th class="py-3 px-4 text-right">Radiographer Share</th>
                 <th class="py-3 px-4 text-right">Expenses</th>
+                <th class="py-3 px-4 text-right">Staff Claims</th>
                 <th class="py-3 px-4 text-right">Total Expenditure</th>
                 <th class="py-3 px-4 text-right">Profit</th>
             </tr>
@@ -194,6 +202,7 @@
                     <td class="py-3 px-4 text-right text-purple-600">NGN {{ number_format($row['radiologist_share'] ?? 0, 2) }}</td>
                     <td class="py-3 px-4 text-right text-sky-600">NGN {{ number_format($row['radiographer_share'] ?? 0, 2) }}</td>
                     <td class="py-3 px-4 text-right text-red-600">NGN {{ number_format($row['expenses'], 2) }}</td>
+                    <td class="py-3 px-4 text-right text-orange-600">NGN {{ number_format($row['staff_claims'] ?? 0, 2) }}</td>
                     <td class="py-3 px-4 text-right text-red-700">NGN {{ number_format($row['total_expenditure'] ?? $row['expenses'], 2) }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-green-600">NGN {{ number_format($row['profit'], 2) }}</td>
                 </tr>

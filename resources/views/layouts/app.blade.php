@@ -181,6 +181,12 @@
 
             @endif
 
+            @if(auth()->user()->role === 'user')
+            <a href="{{ route('commission-claims.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg transition {{ request()->routeIs('commission-claims.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+                <span>Staff Commission Claims</span>
+            </a>
+            @endif
+
             @if(auth()->user()->role == 'staff')
                 @if(in_array(auth()->user()->staff_type ?? '', ['radiologist', 'radiographer'], true))
                 <a href="{{ route('staff.results.index') }}"

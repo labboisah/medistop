@@ -84,7 +84,11 @@
                             @if($staffType === 'radiologist'
                                 && $result->billItem->service->is_xray
                                 && (int) $result->radiologist_id === (int) auth()->id())
-                                <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}" class="ml-3 font-semibold text-accent hover:underline">Report details</a>
+                                @if((int) ($result->print_count ?? 0) === 0)
+                                    <a href="{{ route('staff.results.entry', ['bill' => $result->bill, 'edit' => 1]) }}#bill-item-{{ $result->bill_item_id }}" class="ml-3 font-semibold text-amber-700 hover:underline">Edit report</a>
+                                @else
+                                    <a href="{{ route('staff.results.entry', $result->bill) }}#bill-item-{{ $result->bill_item_id }}" class="ml-3 font-semibold text-accent hover:underline">Report details</a>
+                                @endif
                             @endif
                         @else
                             <span class="text-gray-500">Awaiting radiologist</span>

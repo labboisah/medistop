@@ -73,6 +73,18 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
+    public function updateBankDetails(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->role === 'staff', 403);
+        $data = $request->validate([
+            'bank_name' => ['nullable', 'string', 'max:120'],
+            'bank_account_name' => ['nullable', 'string', 'max:160'],
+            'bank_account_number' => ['nullable', 'string', 'max:32'],
+        ]);
+        $request->user()->forceFill($data)->save();
+        return Redirect::route('profile.edit')->with('status', 'bank-details-updated');
+    }
+
     /**
      * Delete the user's account.
      */

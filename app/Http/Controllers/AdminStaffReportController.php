@@ -127,6 +127,7 @@ class AdminStaffReportController extends Controller
             'totalNet' => $audit['totalNet'],
             'totalPayments' => $audit['totalPayments'],
             'totalExpenses' => $audit['totalExpenses'],
+            'totalStaffClaims' => $audit['totalStaffClaims'],
             'totalExpenditure' => $audit['totalExpenditure'],
             'totalProfit' => $audit['totalProfit'],
             'totalSalary' => $audit['totalSalary'],
@@ -150,7 +151,7 @@ class AdminStaffReportController extends Controller
             fputcsv($file, ['Staff Performance Audit']);
             fputcsv($file, ['From', $from, 'To', $to]);
             fputcsv($file, []);
-            fputcsv($file, ['Date', 'User', 'Bills', 'Gross', 'Discount', 'Net Revenue', 'Payments Collected', 'Radiologist Share', 'Radiographer Share', 'Expenses', 'Total Expenditure', 'Profit']);
+            fputcsv($file, ['Date', 'User', 'Bills', 'Gross', 'Discount', 'Net Revenue', 'Payments Collected', 'Radiologist Share', 'Radiographer Share', 'Expenses', 'Staff Commission Settled', 'Total Expenditure', 'Profit']);
 
             foreach ($audit['rows'] as $row) {
                 fputcsv($file, [
@@ -164,6 +165,7 @@ class AdminStaffReportController extends Controller
                     $row['radiologist_share'],
                     $row['radiographer_share'],
                     $row['expenses'],
+                    $row['staff_claims'] ?? 0,
                     $row['total_expenditure'],
                     $row['profit'],
                 ]);
@@ -369,6 +371,14 @@ class AdminStaffReportController extends Controller
             ->groupBy('report_date', 'user_id')
             ->get();
 
+        $staffClaims = \App\Models\CommissionClaim::query()
+            ->where('status', 'settled')
+            ->whereBetween('settled_at', [Carbon::parse($from)->startOfDay(), Carbon::parse($to)->endOfDay()])
+            ->when($userId, fn ($query) => $query->where('settled_by', $userId))
+            ->selectRaw('DATE(settled_at) as report_date, settled_by as user_id, SUM(settled_amount) as staff_claims')
+            ->groupBy('report_date', 'user_id')
+            ->get();
+
         $shares = BillItem::query()
             ->join('bills', 'bill_items.bill_id', '=', 'bills.id')
             ->leftJoin('revenue_distributions', 'bill_items.id', '=', 'revenue_distributions.bill_item_id')
@@ -384,6 +394,7 @@ class AdminStaffReportController extends Controller
         $users = User::whereIn('id', $bills->pluck('user_id')
             ->merge($payments->pluck('user_id'))
             ->merge($expenses->pluck('user_id'))
+            ->merge($staffClaims->pluck('user_id'))
             ->merge($shares->pluck('user_id'))
             ->unique())
             ->get()
@@ -400,6 +411,7 @@ class AdminStaffReportController extends Controller
         $billMap = $bills->keyBy(fn ($bill) => $bill->report_date.'-'.$bill->user_id);
         $paymentMap = $payments->keyBy(fn ($payment) => $payment->report_date.'-'.$payment->user_id);
         $expenseMap = $expenses->keyBy(fn ($expense) => $expense->report_date.'-'.$expense->user_id);
+        $staffClaimMap = $staffClaims->keyBy(fn ($claim) => $claim->report_date.'-'.$claim->user_id);
         $shareMap = $shares->keyBy(fn ($share) => $share->report_date.'-'.$share->user_id);
         $activeUserIds = $userId ? collect([(int) $userId]) : $users->keys();
         $rows = collect();
@@ -412,16 +424,18 @@ class AdminStaffReportController extends Controller
                 $bill = $billMap->get($key);
                 $payment = $paymentMap->get($key);
                 $expense = $expenseMap->get($key);
+                $staffClaim = $staffClaimMap->get($key);
                 $share = $shareMap->get($key);
 
-                if (! $bill && ! $payment && ! $expense && ! $share) {
+                if (! $bill && ! $payment && ! $expense && ! $share && ! $staffClaim) {
                     continue;
                 }
 
                 $radiologistShare = (float) ($share->radiologist_share ?? 0);
                 $radiographerShare = (float) ($share->radiographer_share ?? 0);
                 $expensesAmount = (float) ($expense->expenses ?? 0);
-                $totalExpenditure = $expensesAmount + $radiologistShare + $radiographerShare;
+                $staffClaimsAmount = (float) ($staffClaim->staff_claims ?? 0);
+                $totalExpenditure = $expensesAmount + $staffClaimsAmount + $radiologistShare + $radiographerShare;
                 $net = (float) ($bill->net ?? 0);
 
                 $rows->push([
@@ -437,6 +451,7 @@ class AdminStaffReportController extends Controller
                     'radiologist_share' => $radiologistShare,
                     'radiographer_share' => $radiographerShare,
                     'expenses' => $expensesAmount,
+                    'staff_claims' => $staffClaimsAmount,
                     'total_expenditure' => $totalExpenditure,
                     'profit' => $net - $totalExpenditure,
                 ]);
@@ -474,6 +489,7 @@ class AdminStaffReportController extends Controller
                     'radiologist_share' => $userRows->sum('radiologist_share'),
                     'radiographer_share' => $userRows->sum('radiographer_share'),
                     'expenses' => $userRows->sum('expenses'),
+                    'staff_claims' => $userRows->sum('staff_claims'),
                     'salary_amount' => 0,
                     'total_expenditure' => $userRows->sum('total_expenditure'),
                     'net_after_salary' => $userRows->sum('net') - $userRows->sum('total_expenditure'),
@@ -506,6 +522,7 @@ class AdminStaffReportController extends Controller
                     'radiologist_share' => 0,
                     'radiographer_share' => 0,
                     'expenses' => 0,
+                    'staff_claims' => 0,
                     'salary_amount' => 0,
                     'total_expenditure' => 0,
                     'net_after_salary' => 0,
@@ -515,6 +532,7 @@ class AdminStaffReportController extends Controller
             $summary = $userSummary->get($salaryUserId);
             $summary['salary_amount'] = $salaryAmount;
             $summary['total_expenditure'] = $summary['expenses']
+                + $summary['staff_claims']
                 + $summary['radiologist_share']
                 + $summary['radiographer_share']
                 + $salaryAmount;
@@ -536,6 +554,7 @@ class AdminStaffReportController extends Controller
             'totalNet' => $rows->sum('net'),
             'totalPayments' => $rows->sum('payments'),
             'totalExpenses' => $rows->sum('expenses'),
+            'totalStaffClaims' => $rows->sum('staff_claims'),
             'totalExpenditure' => $rows->sum('total_expenditure') + $salaryByUser->sum(),
             'totalProfit' => $userSummary->sum('profit'),
             'totalSalary' => $salaryByUser->sum(),
