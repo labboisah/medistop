@@ -64,14 +64,14 @@
 <div class="grid gap-6 lg:grid-cols-2 mb-8">
     <section class="bg-white p-6 rounded-2xl shadow">
         <h2 class="text-xl font-bold text-primary">Claim commission</h2>
-        <p class="mt-2 text-sm text-gray-600">Available to claim: <strong>NGN {{ number_format($claimableCommission, 2) }}</strong></p>
+        <p class="mt-2 text-sm text-gray-600">Today's commission available to claim: <strong>NGN {{ number_format($claimableCommission, 2) }}</strong></p>
         @if(session('success'))<p class="mt-3 text-sm text-green-700">{{ session('success') }}</p>@endif
         <form method="POST" action="{{ route('staff.results.commission-claims.store') }}" class="mt-4 space-y-3">
             @csrf
             <div>
                 <label class="block text-sm font-medium">Amount requested</label>
                 <input type="number" value="{{ number_format($claimableCommission, 2, '.', '') }}" readonly aria-readonly="true" class="mt-1 w-full rounded-lg border-gray-300 bg-gray-100 text-gray-700">
-                <p class="mt-1 text-xs text-gray-500">Your full available commission will be requested.</p>
+                <p class="mt-1 text-xs text-gray-500">This claim is limited to today's remaining commission.</p>
             </div>
             <div><label class="block text-sm font-medium">Note (optional)</label><textarea name="staff_note" rows="2" class="mt-1 w-full rounded-lg border-gray-300"></textarea></div>
             @error('amount')<p class="text-sm text-red-600">{{ $message }}</p>@enderror

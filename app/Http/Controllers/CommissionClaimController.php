@@ -34,6 +34,12 @@ class CommissionClaimController extends Controller
             User::whereKey($staff->id)->lockForUpdate()->firstOrFail();
             $available = $this->earnedCommission($staff);
             $reserved = CommissionClaim::where('staff_id', $staff->id)
+                ->where(function ($query) {
+                    $query->whereDate('commission_date', today())
+                        ->orWhere(function ($legacy) {
+                            $legacy->whereNull('commission_date')->whereDate('created_at', today());
+                        });
+                })
                 ->whereIn('status', ['pending', 'settled'])
                 ->sum(DB::raw("CASE WHEN status = 'pending' THEN requested_amount ELSE settled_amount END"));
             $claimAmount = round($available - (float) $reserved, 2);
@@ -44,6 +50,7 @@ class CommissionClaimController extends Controller
             CommissionClaim::create([
                 'staff_id' => $staff->id,
                 'approver_id' => $approver->id,
+                'commission_date' => today()->toDateString(),
                 'requested_amount' => $claimAmount,
                 'staff_note' => $data['staff_note'] ?? null,
             ]);
@@ -98,7 +105,8 @@ class CommissionClaimController extends Controller
         $column = $staff->staff_type === 'radiologist' ? 'radiologist_amount' : 'radiographer_amount';
         $query = BillResult::query()->join('bill_items', 'bill_results.bill_item_id', '=', 'bill_items.id')
             ->leftJoin('revenue_distributions', 'bill_items.id', '=', 'revenue_distributions.bill_item_id')
-            ->whereNotNull($staff->staff_type === 'radiologist' ? 'bill_results.reported_at' : 'bill_results.performed_at');
+            ->whereNotNull($staff->staff_type === 'radiologist' ? 'bill_results.reported_at' : 'bill_results.performed_at')
+            ->whereDate($staff->staff_type === 'radiologist' ? 'bill_results.reported_at' : 'bill_results.performed_at', today());
         if ($staff->staff_type === 'radiologist') {
             $query->where(fn ($q) => $q->where('bill_results.reported_by', $staff->id)
                 ->orWhere(fn ($f) => $f->whereNull('bill_results.reported_by')->where('bill_results.staff_id', $staff->id)));

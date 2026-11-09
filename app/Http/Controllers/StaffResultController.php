@@ -650,8 +650,16 @@ class StaffResultController extends Controller
             }))
             ->sum('bill_items.price');
 
-        $claimableCommission = (float) $this->commissionQuery()->sum($commissionColumn);
+        $claimableCommission = (float) $this->commissionQuery()
+            ->whereDate($dateColumn, today())
+            ->sum($commissionColumn);
         $reservedClaims = auth()->user()->commissionClaims()
+            ->where(function ($query) {
+                $query->whereDate('commission_date', today())
+                    ->orWhere(function ($legacy) {
+                        $legacy->whereNull('commission_date')->whereDate('created_at', today());
+                    });
+            })
             ->whereIn('status', ['pending', 'settled'])
             ->get(['status', 'requested_amount', 'settled_amount'])
             ->sum(fn ($claim) => $claim->status === 'pending'
