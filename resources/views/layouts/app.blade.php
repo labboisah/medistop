@@ -183,6 +183,9 @@
 
             @if(auth()->user()->role === 'user')
             <a href="{{ route('commission-claims.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg transition {{ request()->routeIs('commission-claims.*') ? 'bg-secondary text-white' : 'hover:bg-secondary' }}">
+                <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m8-4a8 8 0 11-16 0 8 8 0 0116 0z" />
+                </svg>
                 <span>Staff Commission Claims</span>
             </a>
             @endif

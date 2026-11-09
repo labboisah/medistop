@@ -16,7 +16,6 @@ class CommissionClaimController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
             'staff_note' => ['nullable', 'string', 'max:1000'],
         ]);
         $staff = $request->user();
@@ -37,14 +36,15 @@ class CommissionClaimController extends Controller
             $reserved = CommissionClaim::where('staff_id', $staff->id)
                 ->whereIn('status', ['pending', 'settled'])
                 ->sum(DB::raw("CASE WHEN status = 'pending' THEN requested_amount ELSE settled_amount END"));
-            if ((float) $data['amount'] > $available - (float) $reserved) {
-                throw ValidationException::withMessages(['amount' => 'The requested amount is greater than your available commission.']);
+            $claimAmount = round($available - (float) $reserved, 2);
+            if ($claimAmount <= 0) {
+                throw ValidationException::withMessages(['amount' => 'There is no available commission to claim.']);
             }
 
             CommissionClaim::create([
                 'staff_id' => $staff->id,
                 'approver_id' => $approver->id,
-                'requested_amount' => $data['amount'],
+                'requested_amount' => $claimAmount,
                 'staff_note' => $data['staff_note'] ?? null,
             ]);
         });
@@ -55,6 +55,7 @@ class CommissionClaimController extends Controller
     public function index(Request $request): View
     {
         $claims = CommissionClaim::with('staff')->where('approver_id', $request->user()->id)
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
             ->latest()->paginate(20)->withQueryString();
         return view('commission-claims.index', compact('claims'));
     }

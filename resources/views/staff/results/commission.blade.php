@@ -68,7 +68,11 @@
         @if(session('success'))<p class="mt-3 text-sm text-green-700">{{ session('success') }}</p>@endif
         <form method="POST" action="{{ route('staff.results.commission-claims.store') }}" class="mt-4 space-y-3">
             @csrf
-            <div><label class="block text-sm font-medium">Amount requested</label><input type="number" name="amount" min="0.01" max="{{ number_format($claimableCommission, 2, '.', '') }}" step="0.01" required class="mt-1 w-full rounded-lg border-gray-300"></div>
+            <div>
+                <label class="block text-sm font-medium">Amount requested</label>
+                <input type="number" value="{{ number_format($claimableCommission, 2, '.', '') }}" readonly aria-readonly="true" class="mt-1 w-full rounded-lg border-gray-300 bg-gray-100 text-gray-700">
+                <p class="mt-1 text-xs text-gray-500">Your full available commission will be requested.</p>
+            </div>
             <div><label class="block text-sm font-medium">Note (optional)</label><textarea name="staff_note" rows="2" class="mt-1 w-full rounded-lg border-gray-300"></textarea></div>
             @error('amount')<p class="text-sm text-red-600">{{ $message }}</p>@enderror
             <button class="rounded-lg bg-primary px-5 py-2 font-semibold text-white" @disabled($claimableCommission <= 0)>Submit claim</button>

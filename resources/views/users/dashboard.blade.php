@@ -1,4 +1,12 @@
 <!-- SUMMARY CARDS -->
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+    <div>
+        <h2 class="font-bold text-amber-900">Staff commission claims</h2>
+        <p class="mt-1 text-sm text-amber-800">Review requests assigned to you and record the amount actually settled.</p>
+    </div>
+    <a href="{{ route('commission-claims.index') }}" class="inline-flex items-center rounded-xl bg-amber-700 px-5 py-3 font-semibold text-white hover:bg-amber-800">Open claims to settle</a>
+</div>
+
 <div class="grid md:grid-cols-4 gap-6 mb-10">
 
     <div class="bg-white p-6 rounded-2xl shadow">
